@@ -155,7 +155,12 @@ export default class VisBug extends HTMLElement {
 
     el.attr('data-active', true)
     this.active_tool = el
-    this[el.dataset.tool]()
+
+    if (el.dataset.tool === 'download') {
+      this.downloadHtmlWithStylesAndScripts();
+    } else {
+      this[el.dataset.tool]()
+    }
   }
 
   render() {
@@ -169,6 +174,9 @@ export default class VisBug extends HTMLElement {
             ${this.demoTip({key, ...tool})}
           </li>
         `,'')}
+        <li aria-label="Download HTML" aria-description="Download the HTML of the current page" data-tool="download">
+        ${Icons.download} <!-- Certifique-se de adicionar o ícone de download aqui -->
+      </li>
       </ol>
       <ol colors>
         <li class="color" id="foreground" aria-label="Text" aria-description="Change the text color">
@@ -281,6 +289,68 @@ export default class VisBug extends HTMLElement {
       })
 
     return Promise.resolve(new Error("Query not found"))
+  }
+  downloadHtml() {
+    const htmlContent = document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'page.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  downloadHtmlWithStylesAndScripts() {
+    const cloneDocument = document.cloneNode(true);
+  
+    // Embed all stylesheets
+    const styleSheets = [...document.styleSheets];
+    styleSheets.forEach((styleSheet) => {
+      try {
+        if (styleSheet.cssRules) {
+          const newStyle = document.createElement('style');
+          for (const cssRule of styleSheet.cssRules) {
+            newStyle.appendChild(document.createTextNode(cssRule.cssText));
+          }
+          cloneDocument.head.appendChild(newStyle);
+        } else if (styleSheet.href) {
+          const newLink = document.createElement('link');
+          newLink.rel = 'stylesheet';
+          newLink.href = styleSheet.href;
+          cloneDocument.head.appendChild(newLink);
+        }
+      } catch (e) {
+        console.warn('Access to stylesheet %s is restricted by CORS policy', styleSheet.href);
+      }
+    });
+  
+    // Embed all scripts
+    const scripts = [...document.scripts];
+    scripts.forEach((script) => {
+      if (script.src) {
+        const newScript = document.createElement('script');
+        newScript.src = script.src;
+        cloneDocument.body.appendChild(newScript);
+      } else {
+        const newScript = document.createElement('script');
+        newScript.textContent = script.textContent;
+        cloneDocument.body.appendChild(newScript);
+      }
+    });
+  
+    const htmlContent = cloneDocument.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'page_with_styles_and_scripts.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   get activeTool() {

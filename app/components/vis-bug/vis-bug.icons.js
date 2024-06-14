@@ -132,3 +132,9 @@ export const accessibility = `
     <path d="M12,2c1.1,0,2,0.9,2,2s-0.9,2-2,2s-2-0.9-2-2S10.9,2,12,2z M21,9h-6v13h-2v-6h-2v6H9V9H3V7h18V9z"/>
   </svg>
 `
+
+export const download = `
+  <svg viewBox="0 0 24 24">
+    <path d="M5 20h14v-2H5v2zM12 2v12l4-4h-3V2h-2v8H8l4 4z"/>
+  </svg>
+`

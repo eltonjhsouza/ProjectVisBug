@@ -5,19 +5,19 @@ export const VisBugModel = {
   g: {
     tool:        'guides',
     icon:        Icons.guides,
-    label:       '<span><u>G</u>uides</span>',
-    description: 'Verify alignment & measure distances',
+    label:       '<span><u>G</u>uia</span>',
+    description: 'Verifique o alinhamento e meça as distâncias',
     instruction: `<div table>
                     <div>
-                      <b>Element Guides:</b>
+                      <b>Guias de elementos:</b>
                       <span>hover</span>
                     </div>
                     <div>
-                      <b>Measure:</b>
+                      <b>Medida:</b>
                       <span>click+hover</span>
                     </div>
                     <div>
-                      <b>Measure many:</b>
+                      <b>Medir muitos:</b>
                       <span>shift+click</span>
                     </div>
                     <div>
@@ -318,4 +318,11 @@ export const VisBugModel = {
     description: 'Select elements programatically by searching for them or use built in plugins with special commands',
     instruction: '',
   },
+  // w: {
+  //   tool:        'download',
+  //   icon:        Icons.download,
+  //   label:       '<span>Download Html</span>',
+  //   description: `Realiza o download Em HTML da página`,
+  //   instruction: ``,
+  // }
 }
