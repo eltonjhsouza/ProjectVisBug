@@ -34,6 +34,7 @@ export default class VisBug extends HTMLElement {
     super();
     this.iframeContent = null; // Armazena o conteúdo do iframe
     this.globalPageContent = '',
+    this.sitename = '',
     this.pixelMeta = '',
     this.pixeGoogle = '',
     this.pixeCookie = '',
@@ -708,6 +709,19 @@ applyChangesToMobileMediaQuery() {
     this.deactivate_feature = null
   }
 
+  publish() {
+    // Exibir um prompt para o usuario informar o subdomínio do site
+    const subdomain = prompt('Informe o subdomínio do site:');
+    if (subdomain) {
+      this.sitename = subdomain;
+      this.createAndHostWebsite();
+    }
+
+    console.log('publish')
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    this.active_tool.attr('data-active', true)
+  }
+
   move() {
     this.deactivate_feature = Moveable(this.selectorEngine)
   }
@@ -747,6 +761,99 @@ applyChangesToMobileMediaQuery() {
       Color:  this.colorPicker,
       Visbug: this.selectorEngine,
     })
+  }
+  setModalStyle(modal) {
+    const modalDiv = modal.querySelector('#domain-modal');
+    modalDiv.style.cssText = `
+      font-family: Arial, sans-serif;
+      color: #fff;
+      background-color: #1F1F1F;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      position: fixed;
+      z-index: 1000;
+    `;
+
+    const copyButton = modal.querySelector('#copy-button');
+    copyButton.style.cssText = `
+      background-color: #2EAD87;
+      padding: 5px 15px;
+      border: none;
+      color: #ffffff;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-bottom: 10px !important;
+    `;
+  }
+
+  async loadPuterScript() {
+    return new Promise((resolve, reject) => {
+      const head = document.head || document.getElementsByTagName('head')[0];
+      const script = document.createElement('script');
+      script.src = 'https://js.puter.com/v2/';
+      script.onload = resolve;
+      script.onerror = reject;
+      head.appendChild(script);
+    });
+  }
+
+  async createAndHostWebsite() {
+    try {
+      await this.loadPuterScript();
+
+      await puter.fs.mkdir(this.sitename);
+  
+      // (2) Create 'index.html' in the directory with the contents "Hello, world!"
+      //Buscar o conteúdo da página atual e salvar em this.globalPageContent
+      //this.globalPageContent = document.documentElement.outerHTML;
+      let html = await this.generateHtmlWithStylesAndScripts();
+
+      
+      await puter.fs.write(`${this.sitename}/index.html`, html);
+  
+      // (3) Host the directory under a random subdomain
+      let subdomain = this.sitename;
+      const site = await puter.hosting.create(subdomain, this.sitename);
+      const modal = document.createElement('div');
+      modal.innerHTML = `
+        <div id="domain-modal" popover="manual" style="display: block; z-index: 1000">
+          <p>Seu site está disponível em: <a href="https://${site.subdomain}.puter.site" target="_blank">https://${site.subdomain}.puter.site</a></p>
+          <button id="copy-button">Copy to Clipboard</button>
+        </div>
+      `;
+      this.setModalStyle(modal);
+      document.body.appendChild(modal);
+      const copyButton = modal.querySelector('#copy-button');
+      copyButton.addEventListener('click', () => {
+        const domainLink = `https://${site.subdomain}.puter.site`;
+        navigator.clipboard.writeText(domainLink)
+          .then(() => {
+          console.log('Domain link copied to clipboard');
+          })
+          .catch((error) => {
+        console.error('Failed to copy domain link to clipboard:', error);
+          });
+      });
+
+      const event = new KeyboardEvent('keydown', {
+        key: 'D',
+        code: 'KeyD',
+        keyCode: 68,
+        shiftKey: true,
+        altKey: true,
+        bubbles: true
+      });
+      document.dispatchEvent(event);
+
+      window.open(`https://${site.subdomain}.puter.site`, '_blank');
+    } catch (error) {
+      document.write(`An error occurred: ${error.message}`);
+    }
   }
 
   inspector() {
@@ -1228,6 +1335,72 @@ applyChangesToMobileMediaQuery() {
     URL.revokeObjectURL(url);
   }
   
+  async generateHtmlWithStylesAndScripts() {
+    const imageCount = document.createElement('div');
+    imageCount.id = 'imageCount';
+    document.body.appendChild(imageCount);
+  
+    const cloneDocument = document.cloneNode(true);
+    // Embed all stylesheets
+    const styleSheets = [...document.styleSheets];
+    for (const styleSheet of styleSheets) {
+      try {
+        if (styleSheet.cssRules) {
+          const newStyle = document.createElement('style');
+          for (const cssRule of styleSheet.cssRules) {
+            newStyle.appendChild(document.createTextNode(cssRule.cssText));
+          }
+          cloneDocument.head.appendChild(newStyle);
+        } else if (styleSheet.href) {
+          const newLink = document.createElement('link');
+          newLink.rel = 'stylesheet';
+          newLink.href = styleSheet.href;
+          cloneDocument.head.appendChild(newLink);
+        }
+      } catch (e) {
+        console.warn('Access to stylesheet %s is restricted by CORS policy', styleSheet.href);
+      }
+    }
+  
+    // Embed all scripts
+    const scripts = [...document.scripts];
+    for (const script of scripts) {
+      if (script.src) {
+        const newScript = document.createElement('script');
+        newScript.src = script.src;
+        cloneDocument.body.appendChild(newScript);
+      } else {
+        const newScript = document.createElement('script');
+        newScript.textContent = script.textContent;
+        cloneDocument.body.appendChild(newScript);
+      }
+    }
+  
+    const visBugElement = cloneDocument.querySelector('vis-bug');
+    if (visBugElement) {
+      visBugElement.remove();
+    }
+
+    this.removeFacebookPixelsFromHeader(cloneDocument);
+    //Rever pois em alguns casos não exibe o video
+    // this.removeCookies(cloneDocument);
+    if(this.pixelMeta !== '') {
+      this.addPixelToHeader(this.pixelMeta, cloneDocument);
+    }
+
+    const htmlContent = cloneDocument.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    return htmlContent;
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement('a');
+    // a.href = url;
+    // a.download = 'index.html';
+    // document.body.appendChild(a);  
+    // a.click();
+    // document.body.removeChild(a);
+    // URL.revokeObjectURL(url);
+  }
+
   async getBase64Image(imageUrl) {
     try {
       const response = await fetch('https://api-aicopi.zapime.com.br/download-image', {
