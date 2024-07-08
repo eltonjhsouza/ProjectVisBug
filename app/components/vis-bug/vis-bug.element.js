@@ -533,13 +533,21 @@ applyChangesToMobileMediaQuery() {
   const scriptsArray = Array.from(scripts);
   const scriptsToRemove = scriptsArray.filter(script => {
     const scriptContent = script.innerHTML;
+    const scriptSrc = script.src;
     return scriptContent.includes('connect.facebook.net') ||
+           scriptContent.includes('connect.facebook.net/signals/config') ||
            scriptContent.includes('fbq') ||
+           scriptContent.includes('fbq("set"') ||
+           scriptContent.includes('!function(b,e,f,g,a,c,d)') ||
            scriptContent.includes('!function(f,b,e,v,n,t,s)') ||
            scriptContent.includes('www.googletagmanager.com') ||
            scriptContent.includes('pixelId') || 
            scriptContent.includes('PageView') || 
-           scriptContent.includes('facebook') 
+           scriptContent.includes('facebook') ||
+           scriptSrc.includes('connect.facebook.net') ||
+           scriptSrc.includes('www.googletagmanager.com') ||
+           scriptSrc.includes('www.google-analytics.com') ||
+           scriptSrc.includes('google');
   });
 
   scriptsToRemove.forEach(script => {
@@ -846,7 +854,9 @@ applyChangesToMobileMediaQuery() {
   move() {
     this.deactivate_feature = Moveable(this.selectorEngine)
   }
-
+  proxy () {
+    this.dowloadProdxy()
+  }
   margin() {
     this.deactivate_feature = Margin(this.selectorEngine)
   }
@@ -949,7 +959,7 @@ applyChangesToMobileMediaQuery() {
       const newDomain = modal.querySelector('#new-domain');
       newDomain.textContent = `https://${site.subdomain}.puter.site`;
       newDomain.href = `https://${site.subdomain}.puter.site`;
-      
+
       //window.open(`https://${site.subdomain}.puter.site`, '_blank');
     } catch (error) {
       document.write(`An error occurred: ${error.message}`);
@@ -1367,6 +1377,21 @@ applyChangesToMobileMediaQuery() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  dowloadProdxy() {
+    // pegar a url atual
+    const currUrl = window.location.href;
+    const htmlContent = `<html lang="pt" class="no-js"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width,initial-scale=1.0"> <script src="https://www.googleoptimize.com/optimize.js?id=OPT-N7M93KX"></script> <style> * { margin: 0; padding: 0; } html, body { height: 100%; width: 100%; overflow: hidden; font-family: Arial, sans-serif; font-size: 10px; color: #6e6e6e; background-color: #000; } #preview-frame { height: 100%; width: 100%; border: none; } </style> <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> <script> $(document).ready(function () { var calcHeight = function () { $('#preview-frame').height($(window).height()); } calcHeight(); $(window).resize(calcHeight); }); </script> </head> <body> <iframe id="preview-frame" src='${currUrl}' style='width:100%; height:100%;' frameborder='0' sandbox='allow-same-origin allow-scripts allow-popups'></iframe> </body> </html>`;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL
   }
 
   async downloadHtmlWithStylesAndScripts() {

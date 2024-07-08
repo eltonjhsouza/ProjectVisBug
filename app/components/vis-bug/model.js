@@ -2,30 +2,30 @@ import * as Icons from './vis-bug.icons'
 import { metaKey, altKey } from '../../utilities/'
 
 export const VisBugModel = {
-  g: {
-    tool:        'Régua',
-    icon:        Icons.guides,
-    label:       '<span><u>G</u>uia</span>',
-    description: 'Verifique o alinhamento e meça as distâncias',
-    instruction: `<div table>
-                    <div>
-                      <b>Guias de elementos:</b>
-                      <span>hover</span>
-                    </div>
-                    <div>
-                      <b>Medida:</b>
-                      <span>click+hover</span>
-                    </div>
-                    <div>
-                      <b>Medir vários:</b>
-                      <span>shift+click</span>
-                    </div>
-                    <div>
-                      <b>Limpar:</b>
-                      <span>esc</span>
-                    </div>
-                  </div>`,
-  },
+  // g: {
+  //   tool:        'Régua',
+  //   icon:        Icons.guides,
+  //   label:       '<span><u>G</u>uia</span>',
+  //   description: 'Verifique o alinhamento e meça as distâncias',
+  //   instruction: `<div table>
+  //                   <div>
+  //                     <b>Guias de elementos:</b>
+  //                     <span>hover</span>
+  //                   </div>
+  //                   <div>
+  //                     <b>Medida:</b>
+  //                     <span>click+hover</span>
+  //                   </div>
+  //                   <div>
+  //                     <b>Medir vários:</b>
+  //                     <span>shift+click</span>
+  //                   </div>
+  //                   <div>
+  //                     <b>Limpar:</b>
+  //                     <span>esc</span>
+  //                   </div>
+  //                 </div>`,
+  // },
   i: {
     tool:        'inspector',
     icon:        Icons.inspector,
@@ -331,13 +331,20 @@ export const VisBugModel = {
     label:       '<span>Pixel Facebbok</span>',
     description: `Adiciona pixel do facebook`,
     instruction: ``,
+  },
+  j: {
+    tool:        'publish',
+    icon:        Icons.publish_icon,
+    label:       '<span>Change Image</span>',
+    description: `Baixa o HTML da página`,
+    instruction: ``,
+  },
+  o: {
+    tool:        'proxy',
+    icon:        Icons.proxy_icon,
+    label:       '<span>Change Image</span>',
+    description: `Baixa o HTML da página`,
+    instruction: ``,
   }
-//   j: {
-//     tool:        'switchViewtodesktop',
-//     icon:        Icons.desktop,
-//     label:       '<span>Change Image</span>',
-//     description: `Baixa o HTML da página`,
-//     instruction: ``,
-//   }
 }
 
