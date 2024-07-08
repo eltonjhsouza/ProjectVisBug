@@ -1,33 +1,10 @@
-/**
-Types: Not all applicable
-
-export type EditEvent = {
-  createdAt: string;
-  selector: string;
-  editType: EditType;
-  newVal: Record<string, string> | TextVal;
-  oldVal: Record<string, string> | TextVal;
-}
-
-export type TextVal = {
-  text: string;
-}
-
-export enum EditType {
-  TEXT = "TEXT",
-  STYLE = "STYLE",
-  ATTR = "ATTR",
-  INSERT = "INSERT",
-  REMOVE = "REMOVE",
-}
- */
-
 export const EditType = {
     TEXT: "TEXT",
     STYLE: "STYLE",
     ATTR: "ATTR",
     INSERT: "INSERT",
     REMOVE: "REMOVE",
+    MOVE: "MOVE",
   }
   export let history = [];
   export let redo = [];
@@ -53,6 +30,7 @@ export const EditType = {
   export function addToHistory(event) {
     console.log("Histórico adicionado", event)
     if (history.length === 0) {
+      console.log("Novo Evento Edicionado:", event)
       history.push(event);
       return;
     }
@@ -73,15 +51,48 @@ export const EditType = {
   }
   
   export function undoLastEvent() {
+ // Recupera o histórico do localStorage
+ let history = JSON.parse(localStorage.getItem('history')) || [];
+
+ if (history.length < 2) {
+   console.log("Não há eventos suficientes para desfazer.");
+   return;
+ }
+
+ // Remove o último item (representando a posição atual)
+ history.pop();
+
+ // Recupera o penúltimo item (representando o estado anterior do elemento)
+ let lastEvent = history[history.length - 1];
+
+ // Cria um elemento DOM temporário para parsear a string do elemento HTML
+ let tempDiv = document.createElement('div');
+ tempDiv.innerHTML = lastEvent.element;
+ let element = tempDiv.firstElementChild;
+
+ // Seleciona o elemento real na página usando um seletor adequado
+ let realElement = document.querySelector(`[data-label-id="${element.dataset.labelId}"]`);
+
+ if (realElement) {
+   // Substitui o HTML do elemento real pelo HTML do estado anterior
+   realElement.style.x = lastEvent.previousPosition.x;
+   realElement.style.y = lastEvent.previousPosition.y;
+   // realElement.outerHTML = element.outerHTML;
+ } else {
+   console.log("Elemento não encontrado na página ou não está no histórico.");
+ }
+
+ // Atualiza o histórico no localStorage
+ localStorage.setItem('history', JSON.stringify(history));
+  }
+
+  // Check if localStorage history has items and revert to the last item
+  const localStorageHistory = localStorage.getItem("history");
+  if (localStorageHistory) {
     debugger
-    if (history.length === 0) {
-      return;
-    }
-    const lastEvent = history.pop();
-    if (lastEvent) {
-      const reverseEvent = createReverseEvent(lastEvent);
-      applyEvent(reverseEvent);
-      redo.push(lastEvent);
+    const parsedHistory = JSON.parse(localStorageHistory);
+    if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+      history = parsedHistory;
     }
   }
   

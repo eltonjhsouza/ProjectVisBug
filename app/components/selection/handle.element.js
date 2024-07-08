@@ -35,7 +35,6 @@ export class Handle extends HTMLElement {
     e.stopPropagation()
 
     if (e.button !== 0) return
-
     const placement = this.placement
     const handlesEl = e.composedPath().find(el => el.tagName === 'VISBUG-HANDLES')
     const nodeLabelId = handlesEl.getAttribute('data-label-id')

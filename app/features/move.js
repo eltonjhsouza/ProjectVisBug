@@ -2,6 +2,8 @@ import $ from 'blingblingjs'
 import hotkeys from 'hotkeys-js'
 import { getNodeIndex, showEdge, swapElements, notList } from '../utilities/'
 import { toggleWatching } from './imageswap'
+import { handleEditEvent } from "./events";
+import { EditType } from './history';
 
 const key_events = 'up,down,left,right'
 const state = {
@@ -20,12 +22,12 @@ const state = {
 // todo: indicator for when node can descend
 // todo: have it work with shadowDOM
 export function Moveable(visbug) {
+  debugger
   hotkeys(key_events, (e, {key}) => {
     if (e.cancelBubble) return
 
     e.preventDefault()
     e.stopPropagation()
-
     visbug.selection().forEach(el => {
       moveElement(el, key)
       updateFeedback(el)
@@ -44,12 +46,19 @@ export function Moveable(visbug) {
 }
 
 export function moveElement(el, direction) {
+  debugger
   if (!el) return
-
   switch(direction) {
     case 'left':
-      if (canMoveLeft(el))
+      if (canMoveLeft(el)) {
+        debugger
         el.parentNode.insertBefore(el, el.previousElementSibling)
+        handleEditEvent({
+          el,
+          EditType: EditType.MOVE,
+          newValue: el.previousElementSibling
+        })
+      }
       else
         showEdge(el.parentNode)
       break
@@ -118,6 +127,7 @@ export function dragNDrop(selection) {
 }
 
 const moveWatch = node => {
+  debugger
   const $node = $(node)
 
   $node.on('mouseleave', dragDrop)
@@ -133,6 +143,7 @@ const moveWatch = node => {
 }
 
 const moveUnwatch = node => {
+  debugger
   const $node = $(node)
 
   $node.off('mouseleave', dragDrop)
@@ -148,6 +159,7 @@ const moveUnwatch = node => {
 }
 
 const dragStart = ({target}) => {
+  debugger
   if (!state.drag.siblings.has(target))
     return
 
@@ -163,6 +175,7 @@ const dragStart = ({target}) => {
 }
 
 const dragOver = e => {
+  debugger
   if (
     !state.drag.src || 
     state.drag.swapping.get(e.target) || 
@@ -180,6 +193,7 @@ const dragOver = e => {
 }
 
 const dragDrop = e => {
+  debugger
   if (!state.drag.src) return
 
   state.drag.src.removeAttribute('visbug-drag-src')
@@ -221,6 +235,7 @@ const ghostBuster = ({style}) => {
 }
 
 const createDropzoneUI = el => {
+  debugger
   const zone = document.createElement('visbug-corners')
 
   zone.position = {el}

@@ -44,6 +44,7 @@ function debounce(func, wait) {
 }
 
 function undebounceHandleEditEvent(param) {
+    debugger
     const selector =
         elementSelectorCache.get(param.el) || getUniqueSelector(param.el);
 
@@ -57,10 +58,13 @@ function undebounceHandleEditEvent(param) {
     addToHistory(event);
 }
 
-let debouncedHandleEditEvent = debounce(undebounceHandleEditEvent, 1000);
+let debouncedHandleEditEvent = debounce(undebounceHandleEditEvent, 100);
 
 export function handleEditEvent(param) {
-    if (param.editType === EditType.STYLE || param.editType === EditType.TEXT) {
+    debugger
+    if (param.editType === EditType.STYLE 
+    || param.editType === EditType.TEXT
+    || param.editType === EditType.MOVE) {
         debouncedHandleEditEvent(param);
     } else {
         undebounceHandleEditEvent(param);

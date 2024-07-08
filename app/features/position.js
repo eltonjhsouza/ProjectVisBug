@@ -1,6 +1,8 @@
 import $ from 'blingblingjs'
 import hotkeys from 'hotkeys-js'
 import { metaKey, getStyle, getSide, showHideSelected } from '../utilities/'
+import { addToHistory, EditType } from './history';
+import { handleEditEvent } from "./events";
 
 const key_events = 'up,down,left,right'
   .split(',')
@@ -44,7 +46,7 @@ export function Position() {
 }
 
 export function draggable({el, surface = el, cursor = 'move', clickEvent}) {
-   const state = {
+  const state = {
     target: el,
     surface,
     mouse: {
@@ -78,9 +80,10 @@ export function draggable({el, surface = el, cursor = 'move', clickEvent}) {
   }
 
   const onMouseDown = e => {
+    console.log("currentPosition", e.clientX, e.clientY)
     if(e.target !== state.surface) return
     e.preventDefault()
-
+    
     if(getComputedStyle(el).position == 'static')
       el.style.position = 'relative'
     el.style.willChange = 'top,left'
@@ -104,6 +107,18 @@ export function draggable({el, surface = el, cursor = 'move', clickEvent}) {
     state.mouse.y        = e.clientY
     state.mouse.down     = true
     state.travelDistance = 0
+
+    console.log("draggable", state.element.x, state.element.y, state.mouse.x, state.mouse.y)
+    console.log("elemento", el)
+
+    const history = JSON.parse(localStorage.getItem('history')) || []
+    history.push({
+      type: EditType.MOVE,
+      element: el.outerHTML,
+      previousPosition: { x: state.element.x, y: state.element.y },
+      currentPosition: { x: e.clientX, y: e.clientY }
+    })
+    localStorage.setItem('history', JSON.stringify(history))
   }
 
   const onMouseUp = e => {
@@ -137,7 +152,7 @@ export function draggable({el, surface = el, cursor = 'move', clickEvent}) {
 
   const onMouseMove = e => {
     if (!state.mouse.down) return
-
+    // debugger
     e.preventDefault()
     e.stopPropagation()
 
@@ -163,6 +178,7 @@ export function draggable({el, surface = el, cursor = 'move', clickEvent}) {
 }
 
 export function positionElement(els, direction) {
+  debugger
   els
     .map(el => ensurePositionable(el))
     .map(el => showHideSelected(el))

@@ -19,6 +19,7 @@ export class Gridlines extends HTMLElement {
   }
 
   set position(boundingRect) {
+    debugger
     this.$shadow.innerHTML  = this.render(boundingRect)
   }
 
