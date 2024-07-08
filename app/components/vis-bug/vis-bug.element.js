@@ -35,6 +35,7 @@ export default class VisBug extends HTMLElement {
     this.iframeContent = null; // Armazena o conteúdo do iframe
     this.globalPageContent = '',
     this.sitename = '',
+    this.siteDomain = '',
     this.pixelMeta = '',
     this.pixeGoogle = '',
     this.pixeCookie = '',
@@ -293,6 +294,38 @@ applyChangesToMobileMediaQuery() {
     provideSelectorEngine(this.selectorEngine)
 
     this.toolSelected($('[data-tool="guides"]', this.$shadow)[0])
+
+    const modal = this.$shadow.querySelector('#domain-modal');
+    const copyButton = modal.querySelector('#copy-button');
+    const closeButton = modal.querySelector('#close-modal');
+  
+    // Add event listener for the copy button
+    copyButton.addEventListener('click', () => {
+      const domainLink = `https://${this.siteDomain}.puter.site`;
+      navigator.clipboard.writeText(domainLink)
+        .then(() => {
+          console.log('Domain link copied to clipboard');
+          // Preciso de um feedback visual
+          const span = document.createElement('span');
+          span.textContent = 'Copiado';
+          span.style.color = 'green';
+          span.style.marginLeft = '5px';
+          copyButton.insertAdjacentElement('afterend', span);
+          setTimeout(() => {
+            span.remove();
+          }
+          , 2000);
+          
+        })
+        .catch((error) => {
+          console.error('Failed to copy domain link to clipboard:', error);
+        });
+    });
+  
+    // Add event listener for the close button
+    closeButton.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
   }
 
 
@@ -616,18 +649,106 @@ applyChangesToMobileMediaQuery() {
         <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
         <button id="add-pixel-button">Adicionar</button>
       </div>
+
+    <div id="domain-modal" popover="manual" style="display: none; z-index: 1000">
+      <div class="modal-header">
+        <h2 class="modal-title">Site Publicado</h2>
+        <button id="close-modal" class="close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Seu site está disponível em: <a id="new-domain" href="https://${this.siteDomain}.puter.site" target="_blank">https://${this.siteDomain}.puter.site</a></p>
+        <button id="copy-button" class="success">Copiar link</button>
+      </div>
+    </div>
     
       <style>
+      #domain-modal {
+        font-family: Arial, sans-serif;
+        color: #fff;
+        background-color: #1F1F1F;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        position: fixed;
+        z-index: 1000;
+        width: 300px;
+        left: 100%;
+      }
+      #domain-modal a {
+        text-decoration: none;
+        color: #2EAD87;
+        font-weight: bold;
+      }
+
+      .modal-header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .modal-title {
+        font-size: 1.2em;
+        margin: 0;
+      }
+
+      .close {
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: #e74c3c;
+      }
+
+      .modal-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #copy-button {
+        background-color: #2EAD87;
+        padding: 5px 15px;
+        border: none;
+        color: #ffffff;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
       #pixel-modal {
         position: fixed;
         top: 50%;
-        left: 190px;
-        transform: translate(-50%, -50%);
+        left: 100%;
+        width: 16vw;
         background-color: #24272b;
         padding: 20px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         z-index: 1000;
       }
+
+      #pixel-modal button {
+        background-color: #2EAD87;
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        }
+
+      #pixel-modal input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+
+      }
+
       .link {
         position: relative;
         display: inline-block;
@@ -818,39 +939,18 @@ applyChangesToMobileMediaQuery() {
   
       // (3) Host the directory under a random subdomain
       let subdomain = this.sitename;
+      this.siteDomain = subdomain;
       const site = await puter.hosting.create(subdomain, this.sitename);
-      const modal = document.createElement('div');
-      modal.innerHTML = `
-        <div id="domain-modal" popover="manual" style="display: block; z-index: 1000">
-          <p>Seu site está disponível em: <a href="https://${site.subdomain}.puter.site" target="_blank">https://${site.subdomain}.puter.site</a></p>
-          <button id="copy-button">Copy to Clipboard</button>
-        </div>
-      `;
-      this.setModalStyle(modal);
-      document.body.appendChild(modal);
-      const copyButton = modal.querySelector('#copy-button');
-      copyButton.addEventListener('click', () => {
-        const domainLink = `https://${site.subdomain}.puter.site`;
-        navigator.clipboard.writeText(domainLink)
-          .then(() => {
-          console.log('Domain link copied to clipboard');
-          })
-          .catch((error) => {
-        console.error('Failed to copy domain link to clipboard:', error);
-          });
-      });
 
-      const event = new KeyboardEvent('keydown', {
-        key: 'D',
-        code: 'KeyD',
-        keyCode: 68,
-        shiftKey: true,
-        altKey: true,
-        bubbles: true
-      });
-      document.dispatchEvent(event);
-
-      window.open(`https://${site.subdomain}.puter.site`, '_blank');
+      // Exibir o modal com o link do site
+      const modal = this.$shadow.querySelector('#domain-modal');
+      modal.style.display = 'block';
+      // Alterar o texto e href de #new-domain
+      const newDomain = modal.querySelector('#new-domain');
+      newDomain.textContent = `https://${site.subdomain}.puter.site`;
+      newDomain.href = `https://${site.subdomain}.puter.site`;
+      
+      //window.open(`https://${site.subdomain}.puter.site`, '_blank');
     } catch (error) {
       document.write(`An error occurred: ${error.message}`);
     }
