@@ -37,8 +37,9 @@ export default class VisBug extends HTMLElement {
     this.sitename = '',
     this.siteDomain = '',
     this.pixelMeta = '',
-    this.pixeGoogle = '',
-    this.pixeCookie = '',
+    this.pixelGoogle = '',
+    this.gtmCode = '',
+    this.Cookie = '',
     this.originalContent = document.documentElement.innerHTML;
     this.toolbar_model = VisBugModel;
     this.$shadow = this.attachShadow({ mode: 'closed' });
@@ -495,7 +496,6 @@ applyChangesToMobileMediaQuery() {
     else {
       this[el.dataset.tool]()
     }
-    //this.deactivate_feature = this.toolbar_model[el.dataset.tooley].deactivate
   }
 
   addPixelToHeader(pixelCode, clone) {
@@ -526,7 +526,26 @@ applyChangesToMobileMediaQuery() {
 
     console.log('Código do pixel adicionado:', pixelCode);
   }
-  
+
+  addGoogle(pixelIdGoogle, clone) {
+    const gaScriptCode = `
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '${pixelIdGoogle}');
+`;
+
+    const gaScriptTagSrc = clone.createElement("script");
+    gaScriptTagSrc.async = true;
+    gaScriptTagSrc.src = "https://www.googletagmanager.com/gtag/js?id=" + pixelIdGoogle;
+    clone.head.appendChild(gaScriptTagSrc);
+
+    const gaScriptTag = clone.createElement("script");
+    gaScriptTag.innerHTML = gaScriptCode;
+    clone.head.appendChild(gaScriptTag);
+  }
+
+
   removeFacebookPixelsFromHeader(clone) {
   // Função para remover tags script do pixel do Facebook e scripts que contenham !function(f,b,e,v,n,t,s) ou fbq
   const scripts = clone.getElementsByTagName('script');
@@ -544,6 +563,7 @@ applyChangesToMobileMediaQuery() {
            scriptContent.includes('pixelId') || 
            scriptContent.includes('PageView') || 
            scriptContent.includes('facebook') ||
+           scriptContent.includes('gtag') ||
            scriptSrc.includes('connect.facebook.net') ||
            scriptSrc.includes('www.googletagmanager.com') ||
            scriptSrc.includes('www.google-analytics.com') ||
@@ -616,6 +636,7 @@ applyChangesToMobileMediaQuery() {
       });
     });
   }
+
   render() {
     return `
       <visbug-hotkeys></visbug-hotkeys>
@@ -653,10 +674,25 @@ applyChangesToMobileMediaQuery() {
         </li>
       </ol>
     <!-- Modal for adding Facebook Pixel -->
-      <div id="pixel-modal" style="display: none;">
-        <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
-        <button id="add-pixel-button">Adicionar</button>
-      </div>
+    <div id="pixel-modal" style="display: none;">
+      <input type="text" id="ads-input" placeholder="Insira o código do pixel do Facebook">
+      <button id="add-pixel-button">Adicionar</button>
+    </div>
+
+    <div id="ads-modal" style="display: none;">
+      <input type="text" id="gpixel-input" placeholder="Insira a Tag do Google">
+      <button id="add-ads-button">Adicionar</button>
+    </div>
+
+    <div id="gtm-modal" style="display: none;">
+      <input type="text" id="pixel-input" placeholder="Insira o ID do GTM">
+      <button id="add-pixel-button">Adicionar</button>
+    </div>
+
+    <div id="gtm-modal" style="display: none;">
+      <input type="text" id="pixel-input" placeholder="Insira a Tag do Google">
+      <button id="add-pixel-button">Adicionar</button>
+    </div>
 
     <div id="domain-modal" popover="manual" style="display: none; z-index: 1000">
       <div class="modal-header">
@@ -728,7 +764,7 @@ applyChangesToMobileMediaQuery() {
         margin-top: 10px;
       }
 
-      #pixel-modal {
+      #pixel-modal, #ads-modal, #gtm-modal{
         position: fixed;
         top: 50%;
         left: 100%;
@@ -739,7 +775,7 @@ applyChangesToMobileMediaQuery() {
         z-index: 1000;
       }
 
-      #pixel-modal button {
+      #pixel-modal button, #ads-modal button{
         background-color: #2EAD87;
         color: white;
         border: none;
@@ -857,6 +893,28 @@ applyChangesToMobileMediaQuery() {
   proxy () {
     this.dowloadProdxy()
   }
+
+  googlepixel() {
+    console.log('google')
+    const pixelGoogleModal = this.$shadow.querySelector('#ads-modal');
+    pixelGoogleModal.style.display = 'block';
+
+    const addButton = this.$shadow.querySelector('#add-ads-button');
+    addButton.onclick = () => {
+      const pixelInput = this.$shadow.querySelector('#gpixel-input');
+      const pixelCode = pixelInput.value.trim();
+      if (pixelCode) {
+        this.pixelGoogle = pixelCode
+        pixelGoogleModal.style.display = 'none';
+      }
+      pixelGoogleModal.style.display = 'none';
+    };
+
+
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    this.active_tool.attr('data-active', true)
+  }
+
   margin() {
     this.deactivate_feature = Margin(this.selectorEngine)
   }
@@ -1447,6 +1505,10 @@ applyChangesToMobileMediaQuery() {
       this.addPixelToHeader(this.pixelMeta, cloneDocument);
     }
 
+    if(this.pixelGoogle !== '') {
+      this.addGoogle(this.pixelGoogle, cloneDocument);
+    }
+
     const htmlContent = cloneDocument.documentElement.outerHTML;
     const blob = new Blob([htmlContent], { type: 'text/html' });
 
@@ -1512,7 +1574,6 @@ applyChangesToMobileMediaQuery() {
     if(this.pixelMeta !== '') {
       this.addPixelToHeader(this.pixelMeta, cloneDocument);
     }
-
     const htmlContent = cloneDocument.documentElement.outerHTML;
     const blob = new Blob([htmlContent], { type: 'text/html' });
     return htmlContent;
