@@ -325,20 +325,20 @@ export const VisBugModel = {
     description: `Baixa o HTML da página`,
     instruction: ``,
   },
-  j: {
-    tool:        'publish',
-    icon:        Icons.publish_icon,
-    label:       '<span>Publicar seu Site</span>',
-    description: `Publique automaticamente seu site`,
-    instruction: ``,
-  },
-  o: {
-    tool:        'proxy',
-    icon:        Icons.proxy_icon,
-    label:       '<span>Baixar via Proxy</span>',
-    description: `Utilize essa opção apenas quando o download direto não trazer todos os elementos da página.`,
-    instruction: ``,
-  },
+  // j: {
+  //   tool:        'publish',
+  //   icon:        Icons.publish_icon,
+  //   label:       '<span>Publicar seu Site</span>',
+  //   description: `Publique automaticamente seu site`,
+  //   instruction: ``,
+  // },
+  // o: {
+  //   tool:        'proxy',
+  //   icon:        Icons.proxy_icon,
+  //   label:       '<span>Baixar via Proxy</span>',
+  //   description: `Utilize essa opção apenas quando o download direto não trazer todos os elementos da página.`,
+  //   instruction: ``,
+  // },
   y: {
     tool:        'addPixel',
     icon:        Icons.facebook_pixel,
@@ -352,13 +352,13 @@ export const VisBugModel = {
     label:       '<span>Pixel do Google Ads</span>',
     description: `Insira aqui seu Pixel do Google Ads`,
     instruction: ``,
-  },
-  u: {
-    tool:        'gtmGoogle',
-    icon:        Icons.gtm_google,
-    label:       '<span>Tag do GTM (Google TAG Manager)</span>',
-    description: `Insira aqui o GTM (Google TAG Manager)`,
-    instruction: ``,
   }
+  // u: {
+  //   tool:        'gtmGoogle',
+  //   icon:        Icons.gtm_google,
+  //   label:       '<span>Tag do GTM (Google TAG Manager)</span>',
+  //   description: `Insira aqui o GTM (Google TAG Manager)`,
+  //   instruction: ``,
+  // }
 }
 

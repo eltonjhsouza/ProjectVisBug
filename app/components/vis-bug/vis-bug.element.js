@@ -675,7 +675,7 @@ applyChangesToMobileMediaQuery() {
       </ol>
     <!-- Modal for adding Facebook Pixel -->
     <div id="pixel-modal" style="display: none;">
-      <input type="text" id="ads-input" placeholder="Insira o código do pixel do Facebook">
+      <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
       <button id="add-pixel-button">Adicionar</button>
     </div>
 
@@ -685,8 +685,8 @@ applyChangesToMobileMediaQuery() {
     </div>
 
     <div id="gtm-modal" style="display: none;">
-      <input type="text" id="pixel-input" placeholder="Insira o ID do GTM">
-      <button id="add-pixel-button">Adicionar</button>
+      <input type="text" id="gtmpixel-input" placeholder="Insira o ID do GTM">
+      <button id="add-gtmpixel-button">Adicionar</button>
     </div>
 
     <div id="gtm-modal" style="display: none;">
@@ -764,9 +764,9 @@ applyChangesToMobileMediaQuery() {
         margin-top: 10px;
       }
 
-      #pixel-modal, #ads-modal, #gtm-modal{
+      #pixel-modal {
         position: fixed;
-        top: 50%;
+        top: 60%;
         left: 100%;
         width: 16vw;
         background-color: #24272b;
@@ -775,7 +775,29 @@ applyChangesToMobileMediaQuery() {
         z-index: 1000;
       }
 
-      #pixel-modal button, #ads-modal button{
+      #ads-modal {
+        position: fixed;
+        top: 65%;
+        left: 100%;
+        width: 16vw;
+        background-color: #24272b;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      #gtm-modal{
+        position: fixed;
+        top: 70%;
+        left: 100%;
+        width: 16vw;
+        background-color: #24272b;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      #pixel-modal button, #ads-modal button, #gtm-modal button{
         background-color: #2EAD87;
         color: white;
         border: none;
@@ -914,7 +936,27 @@ applyChangesToMobileMediaQuery() {
     this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
     this.active_tool.attr('data-active', true)
   }
+  
+  gtmGoogle() {
+    console.log('GTM')
+    const pixelGtmGoogle = this.$shadow.querySelector('#gtm-modal');
+    pixelGtmGoogle.style.display = 'block';
 
+    const addButton = this.$shadow.querySelector('#add-gtmpixel-button');
+    addButton.onclick = () => {
+      const pixelInput = this.$shadow.querySelector('#gtmpixel-input');
+      const pixelCode = pixelInput.value.trim();
+      if (pixelCode) {
+        this.gtmCode = pixelCode
+        pixelGtmGoogle.style.display = 'none';
+      }
+      pixelGtmGoogle.style.display = 'none';
+    };
+
+
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    this.active_tool.attr('data-active', true)
+  }
   margin() {
     this.deactivate_feature = Margin(this.selectorEngine)
   }
@@ -1508,6 +1550,10 @@ applyChangesToMobileMediaQuery() {
     if(this.pixelGoogle !== '') {
       this.addGoogle(this.pixelGoogle, cloneDocument);
     }
+
+    // if(this.gtmCode !== '') {
+    //   this.addGtmGoogle(this.gtmCode, cloneDocument);
+    // }
 
     const htmlContent = cloneDocument.documentElement.outerHTML;
     const blob = new Blob([htmlContent], { type: 'text/html' });
