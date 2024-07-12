@@ -500,30 +500,6 @@ applyChangesToMobileMediaQuery() {
 
   addPixelToHeader(pixelCode, clone) {
 
-    const pixelScript = `
-      <!-- Facebook Pixel Code -->
-      <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '${pixelCode}');
-      fbq('track', 'PageView');
-      </script>
-      <noscript>
-      <img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=${pixelCode}&ev=PageView&noscript=1"/>
-      </noscript>
-      <!-- End Facebook Pixel Code -->
-    `;
-
-    const head = clone.head || clone.getElementsByTagName('head')[0];
-    head.insertAdjacentHTML('beforeend', pixelScript);
-
     console.log('Código do pixel adicionado:', pixelCode);
   }
 
@@ -1452,7 +1428,7 @@ applyChangesToMobileMediaQuery() {
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
     this.removeCookies(cloneDocument);
-    this.addPixelToHeader(this.pixelMeta, cloneDocument);
+    // this.addPixelToHeader(this.pixelMeta, cloneDocument);
     const htmlContent = cloneDocument.documentElement.outerHTML;
     
     // if (!htmlContent.startsWith('<!DOCTYPE html>')) {
@@ -1482,7 +1458,7 @@ applyChangesToMobileMediaQuery() {
   dowloadProdxy() {
     // pegar a url atual
     const currUrl = window.location.href;
-    const htmlContent = `<html lang="pt" class="no-js"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width,initial-scale=1.0"> <script src="https://www.googleoptimize.com/optimize.js?id=OPT-N7M93KX"></script> <style> * { margin: 0; padding: 0; } html, body { height: 100%; width: 100%; overflow: hidden; font-family: Arial, sans-serif; font-size: 10px; color: #6e6e6e; background-color: #000; } #preview-frame { height: 100%; width: 100%; border: none; } </style> <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> <script> $(document).ready(function () { var calcHeight = function () { $('#preview-frame').height($(window).height()); } calcHeight(); $(window).resize(calcHeight); }); </script> </head> <body> <iframe id="preview-frame" src='${currUrl}' style='width:100%; height:100%;' frameborder='0' sandbox='allow-same-origin allow-scripts allow-popups'></iframe> </body> </html>`;
+    const htmlContent = `<html lang="pt" class="no-js"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width,initial-scale=1.0"></script> <style> * { margin: 0; padding: 0; } html, body { height: 100%; width: 100%; overflow: hidden; font-family: Arial, sans-serif; font-size: 10px; color: #6e6e6e; background-color: #000; } #preview-frame { height: 100%; width: 100%; border: none; } </style> <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> <script> $(document).ready(function () { var calcHeight = function () { $('#preview-frame').height($(window).height()); } calcHeight(); $(window).resize(calcHeight); }); </script> </head> <body> <iframe id="preview-frame" src='${currUrl}' style='width:100%; height:100%;' frameborder='0' sandbox='allow-same-origin allow-scripts allow-popups'></iframe> </body> </html>`;
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1541,22 +1517,36 @@ applyChangesToMobileMediaQuery() {
     }
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
-    //Rever pois em alguns casos não exibe o video
-    // this.removeCookies(cloneDocument);
-    if(this.pixelMeta !== '') {
-      this.addPixelToHeader(this.pixelMeta, cloneDocument);
-    }
-
-    if(this.pixelGoogle !== '') {
-      this.addGoogle(this.pixelGoogle, cloneDocument);
-    }
-
-    // if(this.gtmCode !== '') {
-    //   this.addGtmGoogle(this.gtmCode, cloneDocument);
-    // }
-
+  
     const htmlContent = cloneDocument.documentElement.outerHTML;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+
+    // Enviar o HTML para o backend e obter o HTML atualizado
+    let updatedHtmlContent
+    let response
+    if (this.pixelMeta !== '') {
+      const pixelCode = this.pixelMeta;
+      await fetch(`https://api-aicopi.zapime.com.br/inject-pixel?pixelCode=${encodeURIComponent(pixelCode)}`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'text/html'
+          },
+          body: htmlContent
+      }).then(async res => {
+        if (res.status === 200) {
+          response = res
+          updatedHtmlContent = await response.text();
+        } else {
+          this.deactivate_feature = null
+          alert('Erro ao injetar o pixel. O arquivo será baixado sem o pixel.');
+          updatedHtmlContent = htmlContent;
+        }
+      })
+    }
+    else {
+      updatedHtmlContent = htmlContent;
+    }
+
+    const blob = new Blob([updatedHtmlContent], { type: 'text/html' });
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1617,9 +1607,9 @@ applyChangesToMobileMediaQuery() {
     this.removeFacebookPixelsFromHeader(cloneDocument);
     //Rever pois em alguns casos não exibe o video
     // this.removeCookies(cloneDocument);
-    if(this.pixelMeta !== '') {
-      this.addPixelToHeader(this.pixelMeta, cloneDocument);
-    }
+    // if(this.pixelMeta !== '') {
+    //   this.addPixelToHeader(this.pixelMeta, cloneDocument);
+    // }
     const htmlContent = cloneDocument.documentElement.outerHTML;
     const blob = new Blob([htmlContent], { type: 'text/html' });
     return htmlContent;
