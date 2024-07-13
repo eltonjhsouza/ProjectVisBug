@@ -1517,6 +1517,10 @@ applyChangesToMobileMediaQuery() {
     }
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
+
+    if(this.pixelGoogle !== '') {
+      this.addGoogle(this.pixelGoogle, cloneDocument);
+    }
   
     const htmlContent = cloneDocument.documentElement.outerHTML;
 
@@ -1535,24 +1539,28 @@ applyChangesToMobileMediaQuery() {
         if (res.status === 200) {
           response = res
           updatedHtmlContent = await response.text();
+          console.log('200 ok')
         } else {
           this.deactivate_feature = null
           alert('Erro ao injetar o pixel. O arquivo será baixado sem o pixel.');
           updatedHtmlContent = htmlContent;
+          console.log('Erro')
         }
       })
     }
     else {
       updatedHtmlContent = htmlContent;
+      console.log('sem pixel')
     }
 
     const blob = new Blob([updatedHtmlContent], { type: 'text/html' });
-
+    console.log('passow o blob')
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'index.html';
     document.body.appendChild(a);  
+    console.log('antes do click')
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
