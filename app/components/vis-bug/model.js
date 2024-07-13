@@ -2,30 +2,30 @@ import * as Icons from './vis-bug.icons'
 import { metaKey, altKey } from '../../utilities/'
 
 export const VisBugModel = {
-  g: {
-    tool:        'Régua',
-    icon:        Icons.guides,
-    label:       '<span><u>G</u>uia</span>',
-    description: 'Verifique o alinhamento e meça as distâncias',
-    instruction: `<div table>
-                    <div>
-                      <b>Guias de elementos:</b>
-                      <span>hover</span>
-                    </div>
-                    <div>
-                      <b>Medida:</b>
-                      <span>click+hover</span>
-                    </div>
-                    <div>
-                      <b>Medir vários:</b>
-                      <span>shift+click</span>
-                    </div>
-                    <div>
-                      <b>Limpar:</b>
-                      <span>esc</span>
-                    </div>
-                  </div>`,
-  },
+  // g: {
+  //   tool:        'Régua',
+  //   icon:        Icons.guides,
+  //   label:       '<span><u>G</u>uia</span>',
+  //   description: 'Verifique o alinhamento e meça as distâncias',
+  //   instruction: `<div table>
+  //                   <div>
+  //                     <b>Guias de elementos:</b>
+  //                     <span>hover</span>
+  //                   </div>
+  //                   <div>
+  //                     <b>Medida:</b>
+  //                     <span>click+hover</span>
+  //                   </div>
+  //                   <div>
+  //                     <b>Medir vários:</b>
+  //                     <span>shift+click</span>
+  //                   </div>
+  //                   <div>
+  //                     <b>Limpar:</b>
+  //                     <span>esc</span>
+  //                   </div>
+  //                 </div>`,
+  // },
   i: {
     tool:        'inspector',
     icon:        Icons.inspector,
@@ -325,19 +325,40 @@ export const VisBugModel = {
     description: `Baixa o HTML da página`,
     instruction: ``,
   },
+  // j: {
+  //   tool:        'publish',
+  //   icon:        Icons.publish_icon,
+  //   label:       '<span>Publicar seu Site</span>',
+  //   description: `Publique automaticamente seu site`,
+  //   instruction: ``,
+  // },
+  // o: {
+  //   tool:        'proxy',
+  //   icon:        Icons.proxy_icon,
+  //   label:       '<span>Baixar via Proxy</span>',
+  //   description: `Utilize essa opção apenas quando o download direto não trazer todos os elementos da página.`,
+  //   instruction: ``,
+  // },
   y: {
     tool:        'addPixel',
     icon:        Icons.facebook_pixel,
     label:       '<span>Pixel Facebbok</span>',
-    description: `Adiciona pixel do facebook`,
+    description: `Insira aqui seu Pixel do Facebook`,
+    instruction: ``,
+  },
+  t: {
+    tool:        'googlepixel',
+    icon:        Icons.google_ads,
+    label:       '<span>Pixel do Google Ads</span>',
+    description: `Insira aqui seu Pixel do Google Ads`,
     instruction: ``,
   }
-//   j: {
-//     tool:        'switchViewtodesktop',
-//     icon:        Icons.desktop,
-//     label:       '<span>Change Image</span>',
-//     description: `Baixa o HTML da página`,
-//     instruction: ``,
-//   }
+  // u: {
+  //   tool:        'gtmGoogle',
+  //   icon:        Icons.gtm_google,
+  //   label:       '<span>Tag do GTM (Google TAG Manager)</span>',
+  //   description: `Insira aqui o GTM (Google TAG Manager)`,
+  //   instruction: ``,
+  // }
 }
 

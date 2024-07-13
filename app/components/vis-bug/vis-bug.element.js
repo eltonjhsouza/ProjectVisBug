@@ -34,9 +34,12 @@ export default class VisBug extends HTMLElement {
     super();
     this.iframeContent = null; // Armazena o conteúdo do iframe
     this.globalPageContent = '',
+    this.sitename = '',
+    this.siteDomain = '',
     this.pixelMeta = '',
-    this.pixeGoogle = '',
-    this.pixeCookie = '',
+    this.pixelGoogle = '',
+    this.gtmCode = '',
+    this.Cookie = '',
     this.originalContent = document.documentElement.innerHTML;
     this.toolbar_model = VisBugModel;
     this.$shadow = this.attachShadow({ mode: 'closed' });
@@ -292,6 +295,38 @@ applyChangesToMobileMediaQuery() {
     provideSelectorEngine(this.selectorEngine)
 
     this.toolSelected($('[data-tool="guides"]', this.$shadow)[0])
+
+    const modal = this.$shadow.querySelector('#domain-modal');
+    const copyButton = modal.querySelector('#copy-button');
+    const closeButton = modal.querySelector('#close-modal');
+  
+    // Add event listener for the copy button
+    copyButton.addEventListener('click', () => {
+      const domainLink = `https://${this.siteDomain}.puter.site`;
+      navigator.clipboard.writeText(domainLink)
+        .then(() => {
+          console.log('Domain link copied to clipboard');
+          // Preciso de um feedback visual
+          const span = document.createElement('span');
+          span.textContent = 'Copiado';
+          span.style.color = 'green';
+          span.style.marginLeft = '5px';
+          copyButton.insertAdjacentElement('afterend', span);
+          setTimeout(() => {
+            span.remove();
+          }
+          , 2000);
+          
+        })
+        .catch((error) => {
+          console.error('Failed to copy domain link to clipboard:', error);
+        });
+    });
+  
+    // Add event listener for the close button
+    closeButton.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
   }
 
 
@@ -461,51 +496,54 @@ applyChangesToMobileMediaQuery() {
     else {
       this[el.dataset.tool]()
     }
-    //this.deactivate_feature = this.toolbar_model[el.dataset.tooley].deactivate
   }
 
   addPixelToHeader(pixelCode, clone) {
 
-    const pixelScript = `
-      <!-- Facebook Pixel Code -->
-      <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '${pixelCode}');
-      fbq('track', 'PageView');
-      </script>
-      <noscript>
-      <img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=${pixelCode}&ev=PageView&noscript=1"/>
-      </noscript>
-      <!-- End Facebook Pixel Code -->
-    `;
-
-    const head = clone.head || clone.getElementsByTagName('head')[0];
-    head.insertAdjacentHTML('beforeend', pixelScript);
-
     console.log('Código do pixel adicionado:', pixelCode);
   }
-  
+
+  addGoogle(pixelIdGoogle, clone) {
+    const gaScriptCode = `
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '${pixelIdGoogle}');
+`;
+
+    const gaScriptTagSrc = clone.createElement("script");
+    gaScriptTagSrc.async = true;
+    gaScriptTagSrc.src = "https://www.googletagmanager.com/gtag/js?id=" + pixelIdGoogle;
+    clone.head.appendChild(gaScriptTagSrc);
+
+    const gaScriptTag = clone.createElement("script");
+    gaScriptTag.innerHTML = gaScriptCode;
+    clone.head.appendChild(gaScriptTag);
+  }
+
+
   removeFacebookPixelsFromHeader(clone) {
   // Função para remover tags script do pixel do Facebook e scripts que contenham !function(f,b,e,v,n,t,s) ou fbq
   const scripts = clone.getElementsByTagName('script');
   const scriptsArray = Array.from(scripts);
   const scriptsToRemove = scriptsArray.filter(script => {
     const scriptContent = script.innerHTML;
+    const scriptSrc = script.src;
     return scriptContent.includes('connect.facebook.net') ||
+           scriptContent.includes('connect.facebook.net/signals/config') ||
            scriptContent.includes('fbq') ||
+           scriptContent.includes('fbq("set"') ||
+           scriptContent.includes('!function(b,e,f,g,a,c,d)') ||
            scriptContent.includes('!function(f,b,e,v,n,t,s)') ||
            scriptContent.includes('www.googletagmanager.com') ||
            scriptContent.includes('pixelId') || 
            scriptContent.includes('PageView') || 
-           scriptContent.includes('facebook') 
+           scriptContent.includes('facebook') ||
+           scriptContent.includes('gtag') ||
+           scriptSrc.includes('connect.facebook.net') ||
+           scriptSrc.includes('www.googletagmanager.com') ||
+           scriptSrc.includes('www.google-analytics.com') ||
+           scriptSrc.includes('google');
   });
 
   scriptsToRemove.forEach(script => {
@@ -574,6 +612,7 @@ applyChangesToMobileMediaQuery() {
       });
     });
   }
+
   render() {
     return `
       <visbug-hotkeys></visbug-hotkeys>
@@ -611,22 +650,147 @@ applyChangesToMobileMediaQuery() {
         </li>
       </ol>
     <!-- Modal for adding Facebook Pixel -->
-      <div id="pixel-modal" style="display: none;">
-        <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
-        <button id="add-pixel-button">Adicionar</button>
+    <div id="pixel-modal" style="display: none;">
+      <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
+      <button id="add-pixel-button">Adicionar</button>
+    </div>
+
+    <div id="ads-modal" style="display: none;">
+      <input type="text" id="gpixel-input" placeholder="Insira a Tag do Google">
+      <button id="add-ads-button">Adicionar</button>
+    </div>
+
+    <div id="gtm-modal" style="display: none;">
+      <input type="text" id="gtmpixel-input" placeholder="Insira o ID do GTM">
+      <button id="add-gtmpixel-button">Adicionar</button>
+    </div>
+
+    <div id="gtm-modal" style="display: none;">
+      <input type="text" id="pixel-input" placeholder="Insira a Tag do Google">
+      <button id="add-pixel-button">Adicionar</button>
+    </div>
+
+    <div id="domain-modal" popover="manual" style="display: none; z-index: 1000">
+      <div class="modal-header">
+        <h2 class="modal-title">Site Publicado</h2>
+        <button id="close-modal" class="close">&times;</button>
       </div>
+      <div class="modal-body">
+        <p>Seu site está disponível em: <a id="new-domain" href="https://${this.siteDomain}.puter.site" target="_blank">https://${this.siteDomain}.puter.site</a></p>
+        <button id="copy-button" class="success">Copiar link</button>
+      </div>
+    </div>
     
       <style>
+      #domain-modal {
+        font-family: Arial, sans-serif;
+        color: #fff;
+        background-color: #1F1F1F;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        position: fixed;
+        z-index: 1000;
+        width: 300px;
+        left: 100%;
+      }
+      #domain-modal a {
+        text-decoration: none;
+        color: #2EAD87;
+        font-weight: bold;
+      }
+
+      .modal-header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .modal-title {
+        font-size: 1.2em;
+        margin: 0;
+      }
+
+      .close {
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: #e74c3c;
+      }
+
+      .modal-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #copy-button {
+        background-color: #2EAD87;
+        padding: 5px 15px;
+        border: none;
+        color: #ffffff;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
       #pixel-modal {
         position: fixed;
-        top: 50%;
-        left: 190px;
-        transform: translate(-50%, -50%);
+        top: 60%;
+        left: 100%;
+        width: 16vw;
         background-color: #24272b;
         padding: 20px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         z-index: 1000;
       }
+
+      #ads-modal {
+        position: fixed;
+        top: 65%;
+        left: 100%;
+        width: 16vw;
+        background-color: #24272b;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      #gtm-modal{
+        position: fixed;
+        top: 70%;
+        left: 100%;
+        width: 16vw;
+        background-color: #24272b;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      #pixel-modal button, #ads-modal button, #gtm-modal button{
+        background-color: #2EAD87;
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        }
+
+      #pixel-modal input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+
+      }
+
       .link {
         position: relative;
         display: inline-block;
@@ -708,10 +872,67 @@ applyChangesToMobileMediaQuery() {
     this.deactivate_feature = null
   }
 
+  publish() {
+    // Exibir um prompt para o usuario informar o subdomínio do site
+    const subdomain = prompt('Informe o subdomínio do site:');
+    if (subdomain) {
+      this.sitename = subdomain;
+      this.createAndHostWebsite();
+    }
+
+    console.log('publish')
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    this.active_tool.attr('data-active', true)
+  }
+
   move() {
     this.deactivate_feature = Moveable(this.selectorEngine)
   }
+  proxy () {
+    this.dowloadProdxy()
+  }
 
+  googlepixel() {
+    console.log('google')
+    const pixelGoogleModal = this.$shadow.querySelector('#ads-modal');
+    pixelGoogleModal.style.display = 'block';
+
+    const addButton = this.$shadow.querySelector('#add-ads-button');
+    addButton.onclick = () => {
+      const pixelInput = this.$shadow.querySelector('#gpixel-input');
+      const pixelCode = pixelInput.value.trim();
+      if (pixelCode) {
+        this.pixelGoogle = pixelCode
+        pixelGoogleModal.style.display = 'none';
+      }
+      pixelGoogleModal.style.display = 'none';
+    };
+
+
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    this.active_tool.attr('data-active', true)
+  }
+  
+  gtmGoogle() {
+    console.log('GTM')
+    const pixelGtmGoogle = this.$shadow.querySelector('#gtm-modal');
+    pixelGtmGoogle.style.display = 'block';
+
+    const addButton = this.$shadow.querySelector('#add-gtmpixel-button');
+    addButton.onclick = () => {
+      const pixelInput = this.$shadow.querySelector('#gtmpixel-input');
+      const pixelCode = pixelInput.value.trim();
+      if (pixelCode) {
+        this.gtmCode = pixelCode
+        pixelGtmGoogle.style.display = 'none';
+      }
+      pixelGtmGoogle.style.display = 'none';
+    };
+
+
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    this.active_tool.attr('data-active', true)
+  }
   margin() {
     this.deactivate_feature = Margin(this.selectorEngine)
   }
@@ -747,6 +968,78 @@ applyChangesToMobileMediaQuery() {
       Color:  this.colorPicker,
       Visbug: this.selectorEngine,
     })
+  }
+  setModalStyle(modal) {
+    const modalDiv = modal.querySelector('#domain-modal');
+    modalDiv.style.cssText = `
+      font-family: Arial, sans-serif;
+      color: #fff;
+      background-color: #1F1F1F;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      position: fixed;
+      z-index: 1000;
+    `;
+
+    const copyButton = modal.querySelector('#copy-button');
+    copyButton.style.cssText = `
+      background-color: #2EAD87;
+      padding: 5px 15px;
+      border: none;
+      color: #ffffff;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-bottom: 10px !important;
+    `;
+  }
+
+  async loadPuterScript() {
+    return new Promise((resolve, reject) => {
+      const head = document.head || document.getElementsByTagName('head')[0];
+      const script = document.createElement('script');
+      script.src = 'https://js.puter.com/v2/';
+      script.onload = resolve;
+      script.onerror = reject;
+      head.appendChild(script);
+    });
+  }
+
+  async createAndHostWebsite() {
+    try {
+      await this.loadPuterScript();
+
+      await puter.fs.mkdir(this.sitename);
+  
+      // (2) Create 'index.html' in the directory with the contents "Hello, world!"
+      //Buscar o conteúdo da página atual e salvar em this.globalPageContent
+      //this.globalPageContent = document.documentElement.outerHTML;
+      let html = await this.generateHtmlWithStylesAndScripts();
+
+      
+      await puter.fs.write(`${this.sitename}/index.html`, html);
+  
+      // (3) Host the directory under a random subdomain
+      let subdomain = this.sitename;
+      this.siteDomain = subdomain;
+      const site = await puter.hosting.create(subdomain, this.sitename);
+
+      // Exibir o modal com o link do site
+      const modal = this.$shadow.querySelector('#domain-modal');
+      modal.style.display = 'block';
+      // Alterar o texto e href de #new-domain
+      const newDomain = modal.querySelector('#new-domain');
+      newDomain.textContent = `https://${site.subdomain}.puter.site`;
+      newDomain.href = `https://${site.subdomain}.puter.site`;
+
+      //window.open(`https://${site.subdomain}.puter.site`, '_blank');
+    } catch (error) {
+      document.write(`An error occurred: ${error.message}`);
+    }
   }
 
   inspector() {
@@ -1135,7 +1428,7 @@ applyChangesToMobileMediaQuery() {
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
     this.removeCookies(cloneDocument);
-    this.addPixelToHeader(this.pixelMeta, cloneDocument);
+    // this.addPixelToHeader(this.pixelMeta, cloneDocument);
     const htmlContent = cloneDocument.documentElement.outerHTML;
     
     // if (!htmlContent.startsWith('<!DOCTYPE html>')) {
@@ -1160,6 +1453,21 @@ applyChangesToMobileMediaQuery() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  dowloadProdxy() {
+    // pegar a url atual
+    const currUrl = window.location.href;
+    const htmlContent = `<html lang="pt" class="no-js"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width,initial-scale=1.0"></script> <style> * { margin: 0; padding: 0; } html, body { height: 100%; width: 100%; overflow: hidden; font-family: Arial, sans-serif; font-size: 10px; color: #6e6e6e; background-color: #000; } #preview-frame { height: 100%; width: 100%; border: none; } </style> <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> <script> $(document).ready(function () { var calcHeight = function () { $('#preview-frame').height($(window).height()); } calcHeight(); $(window).resize(calcHeight); }); </script> </head> <body> <iframe id="preview-frame" src='${currUrl}' style='width:100%; height:100%;' frameborder='0' sandbox='allow-same-origin allow-scripts allow-popups'></iframe> </body> </html>`;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL
   }
 
   async downloadHtmlWithStylesAndScripts() {
@@ -1209,25 +1517,120 @@ applyChangesToMobileMediaQuery() {
     }
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
-    //Rever pois em alguns casos não exibe o video
-    // this.removeCookies(cloneDocument);
-    if(this.pixelMeta !== '') {
-      this.addPixelToHeader(this.pixelMeta, cloneDocument);
+
+    if(this.pixelGoogle !== '') {
+      this.addGoogle(this.pixelGoogle, cloneDocument);
+    }
+  
+    const htmlContent = cloneDocument.documentElement.outerHTML;
+
+    // Enviar o HTML para o backend e obter o HTML atualizado
+    let updatedHtmlContent
+    let response
+    if (this.pixelMeta !== '') {
+      const pixelCode = this.pixelMeta;
+      await fetch(`https://api-aicopi.zapime.com.br/inject-pixel?pixelCode=${encodeURIComponent(pixelCode)}`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'text/html'
+          },
+          body: htmlContent
+      }).then(async res => {
+        if (res.status === 200) {
+          response = res
+          updatedHtmlContent = await response.text();
+          console.log('200 ok')
+        } else {
+          this.deactivate_feature = null
+          alert('Erro ao injetar o pixel. O arquivo será baixado sem o pixel.');
+          updatedHtmlContent = htmlContent;
+          console.log('Erro')
+        }
+      })
+    }
+    else {
+      updatedHtmlContent = htmlContent;
+      console.log('sem pixel')
     }
 
-    const htmlContent = cloneDocument.documentElement.outerHTML;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-
+    const blob = new Blob([updatedHtmlContent], { type: 'text/html' });
+    console.log('passow o blob')
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'index.html';
     document.body.appendChild(a);  
+    console.log('antes do click')
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
   
+  async generateHtmlWithStylesAndScripts() {
+    const imageCount = document.createElement('div');
+    imageCount.id = 'imageCount';
+    document.body.appendChild(imageCount);
+  
+    const cloneDocument = document.cloneNode(true);
+    // Embed all stylesheets
+    const styleSheets = [...document.styleSheets];
+    for (const styleSheet of styleSheets) {
+      try {
+        if (styleSheet.cssRules) {
+          const newStyle = document.createElement('style');
+          for (const cssRule of styleSheet.cssRules) {
+            newStyle.appendChild(document.createTextNode(cssRule.cssText));
+          }
+          cloneDocument.head.appendChild(newStyle);
+        } else if (styleSheet.href) {
+          const newLink = document.createElement('link');
+          newLink.rel = 'stylesheet';
+          newLink.href = styleSheet.href;
+          cloneDocument.head.appendChild(newLink);
+        }
+      } catch (e) {
+        console.warn('Access to stylesheet %s is restricted by CORS policy', styleSheet.href);
+      }
+    }
+  
+    // Embed all scripts
+    const scripts = [...document.scripts];
+    for (const script of scripts) {
+      if (script.src) {
+        const newScript = document.createElement('script');
+        newScript.src = script.src;
+        cloneDocument.body.appendChild(newScript);
+      } else {
+        const newScript = document.createElement('script');
+        newScript.textContent = script.textContent;
+        cloneDocument.body.appendChild(newScript);
+      }
+    }
+  
+    const visBugElement = cloneDocument.querySelector('vis-bug');
+    if (visBugElement) {
+      visBugElement.remove();
+    }
+
+    this.removeFacebookPixelsFromHeader(cloneDocument);
+    //Rever pois em alguns casos não exibe o video
+    // this.removeCookies(cloneDocument);
+    // if(this.pixelMeta !== '') {
+    //   this.addPixelToHeader(this.pixelMeta, cloneDocument);
+    // }
+    const htmlContent = cloneDocument.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    return htmlContent;
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement('a');
+    // a.href = url;
+    // a.download = 'index.html';
+    // document.body.appendChild(a);  
+    // a.click();
+    // document.body.removeChild(a);
+    // URL.revokeObjectURL(url);
+  }
+
   async getBase64Image(imageUrl) {
     try {
       const response = await fetch('https://api-aicopi.zapime.com.br/download-image', {
