@@ -42,6 +42,7 @@ export default class VisBug extends HTMLElement {
     this.Cookie = '',
     this.originalContent = document.documentElement.innerHTML;
     this.toolbar_model = VisBugModel;
+    this.listSubdomains = [];
     this.$shadow = this.attachShadow({ mode: 'closed' });
     this.applyScheme = schemeRule(
       this.$shadow,
@@ -284,7 +285,7 @@ applyChangesToMobileMediaQuery() {
     return ['color-scheme']
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     this._tutsBaseURL = this.getAttribute('tutsBaseURL') || 'tuts'
 
     this.setup()
@@ -299,7 +300,96 @@ applyChangesToMobileMediaQuery() {
     const modal = this.$shadow.querySelector('#domain-modal');
     const copyButton = modal.querySelector('#copy-button');
     const closeButton = modal.querySelector('#close-modal');
-  
+
+    const setupModalDomain = this.$shadow.querySelector('#setup-domain-modal');
+    const closeButtonSetup = setupModalDomain.querySelector('#close-modal');
+    const newSubdomainInput = this.$shadow.querySelector('#new-subdomain-input');
+    const addSubdomainButton = this.$shadow.querySelector('#add-subdomain-button');
+
+    await this.loadPuterScript();
+
+    if(!puter.auth.isSignedIn()) {
+      puter.auth.signIn();
+    }
+    this.listSubdomains = await puter.hosting.list();
+    console.log(this.listSubdomains)
+
+    // Preenchendo o select com os subdomínios
+    const select = this.$shadow.querySelector('#availables-domains');
+    
+    this.listSubdomains.forEach(domain => {
+        const option = document.createElement('option');
+        option.value = domain.subdomain;
+        option.textContent = domain.subdomain;
+        select.appendChild(option);
+    });
+    // Captura o valor de domínio selecionado
+    const domainLink = this.$shadow.querySelector('#domain-link');
+    
+    select.addEventListener('change', function() {
+      if (select.value === 'add-new') {
+        newSubdomainInput.style.display = 'block';
+        addSubdomainButton.style.display = 'block';
+    } else {
+      newSubdomainInput.style.display = 'none';
+      addSubdomainButton.style.display = 'none';
+
+      const selectedSubdomain = select.value;
+      const protocol = 'https://';
+      const baseDomain = 'puter.site';
+      const newLink = `${protocol}${selectedSubdomain}.${baseDomain}`;
+      domainLink.href = newLink;
+      domainLink.textContent = newLink;
+    }
+    });
+
+    addSubdomainButton.addEventListener('click', async function() {
+      const newSubdomain = newSubdomainInput.value.trim();
+      // chamar a api do puter e verificar se o domínio já existe
+      if(puter.auth.isSignedIn()) {
+        //let result = await puter.hosting.get(newSubdomain);
+        //encontrar newSubdomain em this.listSubdomains
+        if (this.listSubdomains.find(domain => domain.subdomain === newSubdomain)) {
+          alert('Subdomínio já existe');
+          return;
+        }
+          // exibir o new-subdomain-input
+          const domainAvailable = this.$shadow.querySelector('#domain-available');
+          domainAvailable.style.display = 'block';
+        console.log(result)
+      }
+      debugger
+      // if (newSubdomain) {
+      //     this.listSubdomains.push({ subdomain: newSubdomain });
+      //     populateSelect();
+      //     select.value = newSubdomain;
+      //     const protocol = 'https://';
+      //     const baseDomain = 'puter.site';
+      //     const newLink = `${protocol}${selectedSubdomain}.${baseDomain}`;
+      //     domainLink.href = newLink;
+      //     domainLink.textContent = newLink;
+      //     newSubdomainInput.value = '';
+      //     newSubdomainInput.style.display = 'none';
+      //     addSubdomainButton.style.display = 'none';
+      // } else {
+      //     alert('Por favor, insira um subdomínio.');
+      // }
+    });
+
+        // Desabilitar atalhos de teclado ao focar no input
+        const shortcuts = (e) => {
+          e.stopPropagation();
+      };
+
+      newSubdomainInput.addEventListener('focus', function() {
+          document.addEventListener('keydown', shortcuts, true);
+      });
+
+      newSubdomainInput.addEventListener('blur', function() {
+          document.removeEventListener('keydown', shortcuts, true);
+      });
+
+
     // Add event listener for the copy button
     copyButton.addEventListener('click', () => {
       const domainLink = `https://${this.siteDomain}.puter.site`;
@@ -327,8 +417,11 @@ applyChangesToMobileMediaQuery() {
     closeButton.addEventListener('click', () => {
       modal.style.display = 'none';
     });
-  }
 
+    closeButtonSetup.addEventListener('click', () => {
+      setupModalDomain.style.display = 'none';
+    });
+  }
 
 
   disconnectedCallback() {
@@ -454,6 +547,7 @@ applyChangesToMobileMediaQuery() {
         el.removeAttribute('data-pseudo-select'))
   }
 
+
   toolSelected(el) {
     if (el === null || el === undefined) return
     if (typeof el === 'string')
@@ -502,25 +596,6 @@ applyChangesToMobileMediaQuery() {
 
     console.log('Código do pixel adicionado:', pixelCode);
   }
-
-  addGoogle(pixelIdGoogle, clone) {
-    const gaScriptCode = `
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '${pixelIdGoogle}');
-`;
-
-    const gaScriptTagSrc = clone.createElement("script");
-    gaScriptTagSrc.async = true;
-    gaScriptTagSrc.src = "https://www.googletagmanager.com/gtag/js?id=" + pixelIdGoogle;
-    clone.head.appendChild(gaScriptTagSrc);
-
-    const gaScriptTag = clone.createElement("script");
-    gaScriptTag.innerHTML = gaScriptCode;
-    clone.head.appendChild(gaScriptTag);
-  }
-
 
   removeFacebookPixelsFromHeader(clone) {
   // Função para remover tags script do pixel do Facebook e scripts que contenham !function(f,b,e,v,n,t,s) ou fbq
@@ -680,170 +755,6 @@ applyChangesToMobileMediaQuery() {
         <button id="copy-button" class="success">Copiar link</button>
       </div>
     </div>
-    
-      <style>
-      #domain-modal {
-        font-family: Arial, sans-serif;
-        color: #fff;
-        background-color: #1F1F1F;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        position: fixed;
-        z-index: 1000;
-        width: 300px;
-        left: 100%;
-      }
-      #domain-modal a {
-        text-decoration: none;
-        color: #2EAD87;
-        font-weight: bold;
-      }
-
-      .modal-header {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-      }
-
-      .modal-title {
-        font-size: 1.2em;
-        margin: 0;
-      }
-
-      .close {
-        background: none;
-        border: none;
-        font-size: 1.5em;
-        cursor: pointer;
-        color: #e74c3c;
-      }
-
-      .modal-body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      #copy-button {
-        background-color: #2EAD87;
-        padding: 5px 15px;
-        border: none;
-        color: #ffffff;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-top: 10px;
-      }
-
-      #pixel-modal {
-        position: fixed;
-        top: 60%;
-        left: 100%;
-        width: 16vw;
-        background-color: #24272b;
-        padding: 20px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-      }
-
-      #ads-modal {
-        position: fixed;
-        top: 65%;
-        left: 100%;
-        width: 16vw;
-        background-color: #24272b;
-        padding: 20px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-      }
-
-      #gtm-modal{
-        position: fixed;
-        top: 70%;
-        left: 100%;
-        width: 16vw;
-        background-color: #24272b;
-        padding: 20px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-      }
-
-      #pixel-modal button, #ads-modal button, #gtm-modal button{
-        background-color: #2EAD87;
-        color: white;
-        border: none;
-        padding: 5px 15px;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-top: 10px;
-        }
-
-      #pixel-modal input {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 10px;
-        box-sizing: border-box;
-
-      }
-
-      .link {
-        position: relative;
-        display: inline-block;
-      }
-
-      .link > input {
-        direction: ltr;
-        border: none;
-        font-size: 1em;
-        padding: 0.4em 0.4em 0.4em 3em;
-        outline: none;
-        height: 100%;
-        width: 300px;
-        box-sizing: border-box;
-        caret-color: var(--neon-pink);
-        background-color: var(--theme-bg);
-        color: var(--theme-text_color);
-        user-select: text;
-        cursor: none;
-        -webkit-appearance: none;
-
-        &::placeholder {
-          font-weight: lighter;
-          font-size: 0.8em;
-          color: var(--theme-icon_color);
-        }
-      }
-
-      .link > button {
-        position: absolute;
-        right: 5px;
-        top: 50%;
-        transform: translateY(-50%);
-        padding: 0.4em 0.6em;
-        border: none;
-        background-color: var(--neon-pink);
-        color: white;
-        cursor: pointer;
-        font-size: 0.8em;
-        border-radius: 0.3em;
-        transition: background-color 0.3s ease;
-      }
-
-      .link > span {
-        color: green;
-        margin-left: 5px;
-      }
-    @media (max-width: 375px) {
-      #sumir {
-          display: none;
-        }
-        }
-    </style>
     `;
   }
 
@@ -873,12 +784,26 @@ applyChangesToMobileMediaQuery() {
   }
 
   publish() {
+    const modal = this.$shadow.querySelector('#setup-domain-modal');
+    modal.style.display = 'flex';
+
+    const publishButton = this.$shadow.querySelector('#publish-button');
+    publishButton.onclick = () => {
+      const selectedDomain = this.$shadow.querySelector('#availables-domains');
+        if (selectedDomain) {
+          console.log(selectedDomain.value);
+          alert('Subdomínio selecionado: ' + selectedDomain.value);
+          // Aqui você pode adicionar o código para manipular o valor selecionado
+        } else {
+            alert('Por favor, selecione um subdomínio.');
+        }
+    };
     // Exibir um prompt para o usuario informar o subdomínio do site
-    const subdomain = prompt('Informe o subdomínio do site:');
-    if (subdomain) {
-      this.sitename = subdomain;
-      this.createAndHostWebsite();
-    }
+    // const subdomain = prompt('Informe o subdomínio do site:');
+    // if (subdomain) {
+    //   this.sitename = subdomain;
+    //   this.createAndHostWebsite();
+    // }
 
     console.log('publish')
     this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
@@ -889,7 +814,7 @@ applyChangesToMobileMediaQuery() {
     this.deactivate_feature = Moveable(this.selectorEngine)
   }
   proxy () {
-    this.dowloadProdxy()
+    //this.dowloadProdxy()
   }
 
   googlepixel() {
@@ -969,6 +894,7 @@ applyChangesToMobileMediaQuery() {
       Visbug: this.selectorEngine,
     })
   }
+
   setModalStyle(modal) {
     const modalDiv = modal.querySelector('#domain-modal');
     modalDiv.style.cssText = `
@@ -1123,352 +1049,6 @@ applyChangesToMobileMediaQuery() {
     URL.revokeObjectURL(url);
   }
 
-  async downloadHtmlWithStylesAndScripts2() {
-
-  // Adicionar spinner de carregamento
-  const loadingSpinner = document.createElement('div');
-  loadingSpinner.id = 'loadingSpinner';
-  loadingSpinner.style.position = 'fixed';
-  loadingSpinner.style.top = '50%';
-  loadingSpinner.style.left = '50%';
-  loadingSpinner.style.transform = 'translate(-50%, -50%)';
-  loadingSpinner.style.border = '16px solid #f3f3f3';
-  loadingSpinner.style.borderRadius = '50%';
-  loadingSpinner.style.borderTop = '16px solid #3498db';
-  loadingSpinner.style.width = '120px';
-  loadingSpinner.style.height = '120px';
-  loadingSpinner.style.animation = 'spin 2s linear infinite';
-  document.body.appendChild(loadingSpinner);
-
-      const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-
-    const cloneDocument = document.cloneNode(true);
-    // Embed all stylesheets
-    const styleSheets = [...document.styleSheets];
-    for (const styleSheet of styleSheets) {
-      try {
-        if (styleSheet.cssRules) {
-          const newStyle = document.createElement('style');
-          for (const cssRule of styleSheet.cssRules) {
-            newStyle.appendChild(document.createTextNode(cssRule.cssText));
-          }
-          cloneDocument.head.appendChild(newStyle);
-        } else if (styleSheet.href) {
-          const newLink = document.createElement('link');
-          newLink.rel = 'stylesheet';
-          newLink.href = styleSheet.href;
-          cloneDocument.head.appendChild(newLink);
-        }
-      } catch (e) {
-        console.warn('Access to stylesheet %s is restricted by CORS policy', styleSheet.href);
-      }
-    }
-
-    // Embed all scripts
-    const scripts = [...document.scripts];
-    for (const script of scripts) {
-      if (script.src) {
-        const newScript = document.createElement('script');
-        newScript.src = script.src;
-        cloneDocument.body.appendChild(newScript);
-      } else {
-        const newScript = document.createElement('script');
-        newScript.textContent = script.textContent;
-        cloneDocument.body.appendChild(newScript);
-      }
-    }
-    // Replace image URLs with base64 data
-    const images = [...cloneDocument.querySelectorAll('img')];
-    for (const image of images) {
-      const url = image.src;
-      const extension = url.substring(url.lastIndexOf('.') + 1).toLowerCase();
-      const allowedExtensions = ['webp', 'jpg', 'jpeg', 'png'];
-      if (allowedExtensions.includes(extension)) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        await new Promise(async (resolve, reject) => {
-          img.onload = function () {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            context.drawImage(img, 0, 0);
-            const base64Data = canvas.toDataURL(`image/${extension}`);
-            image.src = base64Data;
-            downloadedImages++;
-            imageCount.textContent = `Imagens baixadas: ${downloadedImages} / ${totalImages}`;
-            resolve();
-          };
-          img.onerror = async function () {
-            try {
-              const response = await fetch(url, { mode: 'no-cors' });
-              const blob = await response.blob();
-              const reader = new FileReader();
-              reader.onloadend = function () {
-                const base64Data = reader.result;
-                image.src = base64Data;
-                downloadedImages++;
-                imageCount.textContent = `Imagens baixadas: ${downloadedImages} / ${totalImages}`;
-                resolve();
-              };
-              reader.readAsDataURL(blob);
-            } catch (error) {
-              console.error(`Failed to load image: ${url}`, error);
-              
-              resolve();
-            }
-          };
-          try {
-            img.src =  await this.getBase64Image(url);
-          } catch (error) {
-            console.error(`Failed to load image: ${url}`, error);
-            img.src = '';
-            resolve();
-          }
-        });
-      }
-    }
-    
-    const visBugElement = cloneDocument.querySelector('vis-bug');
-    const spin = cloneDocument.getElementById('loadingSpinner');
-    if (visBugElement) {
-      visBugElement.remove();
-      spin.remove();
-    }
-
-    const htmlContent = cloneDocument.documentElement.outerHTML;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'index.html';
-    document.body.appendChild(a);
-  
-
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    this.deactivate_feature();
-  }
-
-  //Esse funciona bem, tem que rever as imagens
-  async downloadHtmlWithStylesAndScriptsImage() {
-    // Adicionar spinner de carregamento
-    const loadingSpinner = document.createElement('div');
-    loadingSpinner.id = 'loadingSpinner';
-    loadingSpinner.style.position = 'fixed';
-    loadingSpinner.style.top = '50%';
-    loadingSpinner.style.left = '50%';
-    loadingSpinner.style.transform = 'translate(-50%, -50%)';
-    loadingSpinner.style.border = '16px solid #f3f3f3';
-    loadingSpinner.style.borderRadius = '50%';
-    loadingSpinner.style.borderTop = '16px solid #3498db';
-    loadingSpinner.style.width = '120px';
-    loadingSpinner.style.height = '120px';
-    loadingSpinner.style.animation = 'spin 2s linear infinite';
-    loadingSpinner.style.zIndex = '1000';
-    document.body.appendChild(loadingSpinner);
-  
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      #imageCount {
-        position: fixed;
-        top: 45%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 20px;
-        color: #3498db;
-        z-index: 1000;
-      }
-    `;
-    document.head.appendChild(style);
-  
-    const imageCount = document.createElement('div');
-    imageCount.id = 'imageCount';
-    document.body.appendChild(imageCount);
-  
-    const cloneDocument = document.cloneNode(true);
-    // Embed all stylesheets
-    const styleSheets = [...document.styleSheets];
-    for (const styleSheet of styleSheets) {
-      try {
-        if (styleSheet.cssRules) {
-          const newStyle = document.createElement('style');
-          for (const cssRule of styleSheet.cssRules) {
-            newStyle.appendChild(document.createTextNode(cssRule.cssText));
-          }
-          cloneDocument.head.appendChild(newStyle);
-        } else if (styleSheet.href) {
-          const newLink = document.createElement('link');
-          newLink.rel = 'stylesheet';
-          newLink.href = styleSheet.href;
-          cloneDocument.head.appendChild(newLink);
-        }
-      } catch (e) {
-        console.warn('Access to stylesheet %s is restricted by CORS policy', styleSheet.href);
-      }
-    }
-  
-    // Embed all scripts
-    const scripts = [...document.scripts];
-    for (const script of scripts) {
-      if (script.src) {
-        const newScript = document.createElement('script');
-        newScript.src = script.src;
-        cloneDocument.body.appendChild(newScript);
-      } else {
-        const newScript = document.createElement('script');
-        newScript.textContent = script.textContent;
-        cloneDocument.body.appendChild(newScript);
-      }
-    }
-  
-    // Replace image URLs with base64 data
-    const images = [...cloneDocument.querySelectorAll('img')];
-    const totalImages = images.length;
-    let downloadedImages = 0;
-    imageCount.textContent = `Estamos baixando sua página: 0 / ${totalImages}`;
-  
-    for (const image of images) {
-      const url = image.src;
-      const extension = url.substring(url.lastIndexOf('.') + 1).toLowerCase();
-      const allowedExtensions = ['webp', 'jpg', 'jpeg', 'png'];
-      if (allowedExtensions.includes(extension)) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        // await new Promise(async (resolve, reject) => {
-        //   img.onload = function () {
-        //     canvas.width = img.width;
-        //     canvas.height = img.height;
-        //     context.drawImage(img, 0, 0);
-        //     const base64Data = canvas.toDataURL(`image/${extension}`);
-        //     image.src = base64Data;
-        //     downloadedImages++;
-        //     imageCount.textContent = `Imagens baixadas: ${downloadedImages} / ${totalImages}`;
-        //     resolve();
-        //   };
-        //   img.onerror = async function () {
-        //     debugger
-        //     try {
-        //       const response = await fetch(url, { mode: 'no-cors' });
-        //       const blob = await response.blob();
-        //       const reader = new FileReader();
-        //       reader.onloadend = function () {
-        //         const base64Data = reader.result;
-        //         image.src = base64Data;
-        //         downloadedImages++;
-        //         imageCount.textContent = `Imagens baixadas: ${downloadedImages} / ${totalImages}`;
-        //         resolve();
-        //       };
-        //       reader.readAsDataURL(blob);
-        //     } catch (error) {
-        //       console.error(`Failed to load image: ${url}`, error);
-        //       resolve();
-        //     }
-        //   };
-        //   try {
-        //     img.src = await this.getBase64Image(url);
-        //   } catch (error) {
-        //     console.error(`Failed to load image: ${url}`, error);
-        //     img.src = '';
-        //     resolve();
-        //   }
-        // });
-        await new Promise(async (resolve, reject) => {
-          img.onload = function () {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            context.drawImage(img, 0, 0);
-            const base64Data = canvas.toDataURL(`image/${extension}`);
-            image.src = base64Data;
-            resolve();
-          };
-          try {
-            img.src =  await this.getBase64Image(url);
-            console.error(`Failed to load image: ${url}`, error);
-            downloadedImages++;
-            imageCount.textContent = `Imagens baixadas: ${downloadedImages} / ${totalImages}`;
-            loadingSpinner.remove();
-            reject();
-          } catch (error) {
-            console.error(`Failed to load image: ${url}`, error);
-            img.src = '';
-            downloadedImages++;
-            imageCount.textContent = `Imagens baixadas: ${downloadedImages} / ${totalImages}`;
-            loadingSpinner.remove();
-            resolve();
-          }
-        });
-      }
-    }
-
-    const visBugElement = cloneDocument.querySelector('vis-bug');
-    const spin = cloneDocument.getElementById('loadingSpinner');
-    if (visBugElement) {
-      visBugElement.remove();
-      spin.remove();
-    }
-    loadingSpinner.style.visibility = 'hidden';
-    loadingSpinner.remove();
-    imageCount.style.visibility = 'hidden';
-    spin.remove();
-
-    this.removeFacebookPixelsFromHeader(cloneDocument);
-    this.removeCookies(cloneDocument);
-    // this.addPixelToHeader(this.pixelMeta, cloneDocument);
-    const htmlContent = cloneDocument.documentElement.outerHTML;
-    
-    // if (!htmlContent.startsWith('<!DOCTYPE html>')) {
-    //   htmlContent.innerHTML = '<!DOCTYPE html>' + htmlContent;
-    // }
-
-    // preciso inserir https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css no head
-    const head = cloneDocument.head || cloneDocument.getElementsByTagName('head')[0];
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-    head.appendChild(link);
-    
-    this.globalPageContent = htmlContent;
-
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'index.html';
-    document.body.appendChild(a);  
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  dowloadProdxy() {
-    // pegar a url atual
-    const currUrl = window.location.href;
-    const htmlContent = `<html lang="pt" class="no-js"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width,initial-scale=1.0"></script> <style> * { margin: 0; padding: 0; } html, body { height: 100%; width: 100%; overflow: hidden; font-family: Arial, sans-serif; font-size: 10px; color: #6e6e6e; background-color: #000; } #preview-frame { height: 100%; width: 100%; border: none; } </style> <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> <script> $(document).ready(function () { var calcHeight = function () { $('#preview-frame').height($(window).height()); } calcHeight(); $(window).resize(calcHeight); }); </script> </head> <body> <iframe id="preview-frame" src='${currUrl}' style='width:100%; height:100%;' frameborder='0' sandbox='allow-same-origin allow-scripts allow-popups'></iframe> </body> </html>`;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'index.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL
-  }
 
   async downloadHtmlWithStylesAndScripts() {
     const imageCount = document.createElement('div');
@@ -1518,23 +1098,24 @@ applyChangesToMobileMediaQuery() {
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
 
-    if(this.pixelGoogle !== '') {
-      this.addGoogle(this.pixelGoogle, cloneDocument);
-    }
-  
     const htmlContent = cloneDocument.documentElement.outerHTML;
 
     // Enviar o HTML para o backend e obter o HTML atualizado
     let updatedHtmlContent
     let response
-    if (this.pixelMeta !== '') {
+    if (this.pixelMeta !== '' || this.pixelGoogle !== '') {
       const pixelCode = this.pixelMeta;
-      await fetch(`https://api-aicopi.zapime.com.br/inject-pixel?pixelCode=${encodeURIComponent(pixelCode)}`, {
+      const payload = {
+        pixelMeta: this.pixelMeta,
+        pixelGoogle: this.pixelGoogle,
+        htmlContent: htmlContent
+      };
+      await fetch(`https://api-aicopi.zapime.com.br/inject-pixel`, {
           method: 'POST',
           headers: {
               'Content-Type': 'text/html'
           },
-          body: htmlContent
+          body: JSON.stringify(payload)
       }).then(async res => {
         if (res.status === 200) {
           response = res
@@ -1564,7 +1145,8 @@ applyChangesToMobileMediaQuery() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }
+}
+
   
   async generateHtmlWithStylesAndScripts() {
     const imageCount = document.createElement('div');
