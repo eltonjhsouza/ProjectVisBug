@@ -122,6 +122,7 @@ export default class VisBug extends HTMLElement {
 
         const switchViewButton = document.documentElement.outerHTML;
 
+        debugger
         if (switchViewButton) {
           switchViewButton.remove();
         }
@@ -304,13 +305,15 @@ applyChangesToMobileMediaQuery() {
     const setupModalDomain = this.$shadow.querySelector('#setup-domain-modal');
     const closeButtonSetup = setupModalDomain.querySelector('#close-modal');
     const newSubdomainInput = this.$shadow.querySelector('#new-subdomain-input');
+    const checkAvailability = this.$shadow.querySelector('#check-availability');
+    const publishButton = this.$shadow.querySelector('#publish-button');
     const addSubdomainButton = this.$shadow.querySelector('#add-subdomain-button');
 
     await this.loadPuterScript();
 
-    if(!puter.auth.isSignedIn()) {
-      puter.auth.signIn();
-    }
+    // if(!puter.auth.isSignedIn()) {
+    //   puter.auth.signIn();
+    // }
     this.listSubdomains = await puter.hosting.list();
     console.log(this.listSubdomains)
 
@@ -329,10 +332,11 @@ applyChangesToMobileMediaQuery() {
     select.addEventListener('change', function() {
       if (select.value === 'add-new') {
         newSubdomainInput.style.display = 'block';
-        addSubdomainButton.style.display = 'block';
+        checkAvailability.style.display = 'block';
+        publishButton.style.display = 'none';
     } else {
       newSubdomainInput.style.display = 'none';
-      addSubdomainButton.style.display = 'none';
+      checkAvailability.style.display = 'none';
 
       const selectedSubdomain = select.value;
       const protocol = 'https://';
@@ -343,22 +347,28 @@ applyChangesToMobileMediaQuery() {
     }
     });
 
-    addSubdomainButton.addEventListener('click', async function() {
+    let domainAvailableText = this.$shadow.querySelector('#domain-available');
+    let domainAvailable = false;
+    checkAvailability.addEventListener('click', async function() {
+      debugger
       const newSubdomain = newSubdomainInput.value.trim();
       // chamar a api do puter e verificar se o domínio já existe
       if(puter.auth.isSignedIn()) {
+        this.listSubdomains = await puter.hosting.list();
         //let result = await puter.hosting.get(newSubdomain);
         //encontrar newSubdomain em this.listSubdomains
         if (this.listSubdomains.find(domain => domain.subdomain === newSubdomain)) {
           alert('Subdomínio já existe');
           return;
         }
-          // exibir o new-subdomain-input
-          const domainAvailable = this.$shadow.querySelector('#domain-available');
-          domainAvailable.style.display = 'block';
-        console.log(result)
+        domainAvailable = true;
       }
-      debugger
+
+      if (domainAvailable) {
+        domainAvailableText.style.display = 'block';
+        checkAvailability.style.display = 'none';
+      }
+
       // if (newSubdomain) {
       //     this.listSubdomains.push({ subdomain: newSubdomain });
       //     populateSelect();
@@ -755,6 +765,22 @@ applyChangesToMobileMediaQuery() {
         <button id="copy-button" class="success">Copiar link</button>
       </div>
     </div>
+
+    <div id="setup-domain-modal" class="modal">
+        <span id="close-modal" class="close">&times;</span>
+        <h2>Configurando Subdomínio</h2>
+        <p>Domínio Selecionado:</p>
+        <p><a id="domain-link" href="https://teste12345.puter.site" target="_blank">https://teste12345.puter.site</a></p>
+        <select id="availables-domains">
+            <option value="" disabled selected>Selecione um subdomínio</option>
+            <option value="add-new">Adicionar novo domínio</option>
+        </select>
+        <input type="text" id="new-subdomain-input" placeholder="Novo subdomínio" style="display:none;">
+        <span id="domain-available" style="display:none;">Subdomínio disponível</span>
+        <button id="check-availability" style="display:none;">Checar Disponibilidade</button>
+        <button id="add-subdomain-button" style="display:none;">Checar Disponibilidade</button>
+        <button id="publish-button">Publicar</button>
+    </div>
     `;
   }
 
@@ -790,12 +816,19 @@ applyChangesToMobileMediaQuery() {
     const publishButton = this.$shadow.querySelector('#publish-button');
     publishButton.onclick = () => {
       const selectedDomain = this.$shadow.querySelector('#availables-domains');
-        if (selectedDomain) {
-          console.log(selectedDomain.value);
-          alert('Subdomínio selecionado: ' + selectedDomain.value);
+      // Se for add-new, eu estou addicionando um novo domínio e preciso pegar o input do usuário
+        if (selectedDomain.value === 'add-new') {
+          var newDomain = this.$shadow.querySelector('#new-subdomain-input');
+          console.log(newDomain.value);
+          // Tentar criar o diretório para o domínio
+          this.sitename = newDomain.value;
+          this.createAndHostWebsite();
+          // alert('Subdomínio selecionado: ' + selectedDomain.value);
           // Aqui você pode adicionar o código para manipular o valor selecionado
         } else {
-            alert('Por favor, selecione um subdomínio.');
+            debugger
+            this.sitename = selectedDomain.value;
+            this.createAndHostWebsite();
         }
     };
     // Exibir um prompt para o usuario informar o subdomínio do site
@@ -934,25 +967,105 @@ applyChangesToMobileMediaQuery() {
       head.appendChild(script);
     });
   }
+  async createSubdomain(subdomain, directory) {
+    try {
+        const site = await puter.hosting.create(subdomain, directory);
+        console.log(`Subdomínio criado: ${site.subdomain}.puter.site`);
+    } catch (error) {
+        console.error('Erro ao criar subdomínio:', error);
+        this.updateSubdomain(subdomain, subdomain, directory.name);
+    }
+  }
+
+  async updateSubdomain(oldSubdomain, newSubdomain, directory) {
+    try {
+        await puter.hosting.delete(oldSubdomain);
+        console.log(`Subdomínio removido: ${oldSubdomain}.puter.site`);
+        
+        const site = await puter.hosting.create(newSubdomain, directory);
+        console.log(`Novo subdomínio criado: ${site.subdomain}.puter.site`);
+    } catch (error) {
+      if (error.error.code === 'already_in_use') {
+        debugger
+        //const site = await puter.hosting.update(subdomain, directory.name);
+        this.updateSubdomain(subdomain, subdomain, directory.name);
+      }
+    }
+}
+
+async removeSubdomain(subdomain) {
+  try {
+      await puter.hosting.delete(subdomain);
+      console.log(`Subdomínio removido: ${subdomain}.puter.site`);
+  } catch (error) {
+      console.error('Erro ao remover subdomínio:', error);
+  }
+}
 
   async createAndHostWebsite() {
-    try {
-      await this.loadPuterScript();
+    debugger
+    await this.loadPuterScript();
+    let subdomain = this.sitename;
+    this.siteDomain = subdomain;
 
-      await puter.fs.mkdir(this.sitename);
+    // Deleta o subdomain
+    try {
+      await puter.hosting.delete(subdomain)
+    } catch (error) {
+      debugger
+      console.error('Erro ao remover subdomínio:', error);
+    }
+
+    //deleta o directorio
+    try {
+      await puter.fs.delete(`${subdomain}Folder`, { recursive: true });
+    } catch (error) {
+      debugger
+      console.error('Erro ao remover diretório:', error);
+    }
+    // (1) Create a directory with the site name
+    let directory = await puter.fs.mkdir(`${this.sitename}Folder`, { overwrite: true });
+    let folder = `${directory.name}`;
+    // Recebe o html da página atual
+    let html = await this.generateHtmlWithStylesAndScripts();
+    try {
+      await puter.fs.write(`${folder}/index.html`, html);
+    } catch (error) {
+      debugger
+      console.error('Erro ao escrever arquivo:', error);
+    }
   
+    // Cria o subdominio
+    try {
+      await puter.hosting.create(subdomain, folder);
+    } catch (error) {
+      debugger
+      console.error('Erro ao criar subdomínio:', error);
+      await puter.hosting.update(subdomain, folder);
+    }
+    const modal = this.$shadow.querySelector('#domain-modal');
+    modal.style.display = 'block';
+    // Alterar o texto e href de #new-domain
+    const newDomain = modal.querySelector('#new-domain');
+    newDomain.textContent = `https://${site.subdomain}.puter.site`;
+    newDomain.href = `https://${site.subdomain}.puter.site`;
+
+    try {     
       // (2) Create 'index.html' in the directory with the contents "Hello, world!"
       //Buscar o conteúdo da página atual e salvar em this.globalPageContent
       //this.globalPageContent = document.documentElement.outerHTML;
-      let html = await this.generateHtmlWithStylesAndScripts();
 
       
-      await puter.fs.write(`${this.sitename}/index.html`, html);
   
       // (3) Host the directory under a random subdomain
-      let subdomain = this.sitename;
-      this.siteDomain = subdomain;
-      const site = await puter.hosting.create(subdomain, this.sitename);
+      
+      //Verificar se posso utilizar o update para criar
+      //se não existir, criar um novo
+      //var existSubdomain = await puter.hosting.get(subdomain)
+      debugger
+      //const site = await puter.hosting.create(subdomain, this.sitename);
+      this.createSubdomain(subdomain, directory.name);
+      //const site = await puter.hosting.create(subdomain, directory.name);
 
       // Exibir o modal com o link do site
       const modal = this.$shadow.querySelector('#domain-modal');
@@ -964,6 +1077,19 @@ applyChangesToMobileMediaQuery() {
 
       //window.open(`https://${site.subdomain}.puter.site`, '_blank');
     } catch (error) {
+      if (error.code === 'item_with_same_name_exists') {
+        debugger
+        const teste = await puter.hosting.delete(subdomain)
+        const site = await puter.hosting.update(subdomain, directory.name);
+      }
+
+      if (error.error.code === 'already_in_use') {
+        debugger
+        //const site = await puter.hosting.update(subdomain, directory.name);
+        this.updateSubdomain(subdomain, subdomain, directory.name);
+      }
+      debugger
+      this.updateSubdomain(subdomain, subdomain, directory.name);
       document.write(`An error occurred: ${error.message}`);
     }
   }
@@ -1097,7 +1223,7 @@ applyChangesToMobileMediaQuery() {
     }
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
-
+  
     const htmlContent = cloneDocument.documentElement.outerHTML;
 
     // Enviar o HTML para o backend e obter o HTML atualizado
