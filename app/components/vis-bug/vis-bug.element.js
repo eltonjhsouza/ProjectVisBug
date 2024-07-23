@@ -945,6 +945,12 @@ applyChangesToMobileMediaQuery() {
       }
     });
 
+      //Remover <aside>
+    const asideElements = cloneDocument.querySelectorAll('aside');
+    asideElements.forEach(aside => {
+      aside.remove();
+    });
+
     const visBugElement = cloneDocument.querySelector('vis-bug');
     if (visBugElement) {
       visBugElement.remove();
