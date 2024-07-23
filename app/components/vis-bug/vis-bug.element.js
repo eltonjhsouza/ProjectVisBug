@@ -50,6 +50,7 @@ export default class VisBug extends HTMLElement {
   }
 
   switchView() {
+    debugger
     const e = document.getElementById("editorFrame");
     if (e) {
       // Sair da visualização móvel e aplicar alterações ao documento original
@@ -74,6 +75,7 @@ export default class VisBug extends HTMLElement {
       });
     } else {
       // Entrar na visualização móvel
+      debugger
       const div = document.createElement("div");
       div.id = "mobileView";
       div.style.position = "fixed";
@@ -121,6 +123,7 @@ export default class VisBug extends HTMLElement {
 
         const switchViewButton = document.documentElement.outerHTML;
 
+        debugger
         if (switchViewButton) {
           switchViewButton.remove();
         }
@@ -247,6 +250,7 @@ export default class VisBug extends HTMLElement {
   }
 
  switchToNormalView() {
+  debugger
   let self = this;
   const e = document.getElementById("mobileView");
   if (e) {
@@ -540,6 +544,8 @@ applyChangesToMobileMediaQuery() {
            scriptContent.includes('PageView') || 
            scriptContent.includes('facebook') ||
            scriptContent.includes('gtag') ||
+           scriptContent.includes('bundle.min.js') ||
+           scriptContent.includes('chrome-extension') ||
            scriptSrc.includes('connect.facebook.net') ||
            scriptSrc.includes('www.googletagmanager.com') ||
            scriptSrc.includes('www.google-analytics.com') ||
@@ -1511,6 +1517,15 @@ applyChangesToMobileMediaQuery() {
       }
     }
   
+    //Remover o bundle.js ou bundle.min.js src="
+    // Remove specific scripts
+    const scriptElements = cloneDocument.querySelectorAll('script');
+    scriptElements.forEach(script => {
+      if (script.src.includes('bundle.min.js') || script.src.includes('chrome-extension')) {
+        script.remove();
+      }
+    });
+
     const visBugElement = cloneDocument.querySelector('vis-bug');
     if (visBugElement) {
       visBugElement.remove();
