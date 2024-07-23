@@ -300,131 +300,6 @@ applyChangesToMobileMediaQuery() {
     provideSelectorEngine(this.selectorEngine)
 
     this.toolSelected($('[data-tool="guides"]', this.$shadow)[0])
-
-    const modal = this.$shadow.querySelector('#domain-modal');
-    const copyButton = modal.querySelector('#copy-button');
-    const closeButton = modal.querySelector('#close-modal');
-
-    const setupModalDomain = this.$shadow.querySelector('#setup-domain-modal');
-    const closeButtonSetup = setupModalDomain.querySelector('#close-modal');
-    const newSubdomainInput = this.$shadow.querySelector('#new-subdomain-input');
-    const addSubdomainButton = this.$shadow.querySelector('#add-subdomain-button');
-
-    await this.loadPuterScript();
-
-    if(!puter.auth.isSignedIn()) {
-      puter.auth.signIn();
-    }
-    this.listSubdomains = await puter.hosting.list();
-    console.log(this.listSubdomains)
-
-    // Preenchendo o select com os subdomínios
-    const select = this.$shadow.querySelector('#availables-domains');
-    
-    this.listSubdomains.forEach(domain => {
-        const option = document.createElement('option');
-        option.value = domain.subdomain;
-        option.textContent = domain.subdomain;
-        select.appendChild(option);
-    });
-    // Captura o valor de domínio selecionado
-    const domainLink = this.$shadow.querySelector('#domain-link');
-    
-    select.addEventListener('change', function() {
-      if (select.value === 'add-new') {
-        newSubdomainInput.style.display = 'block';
-        addSubdomainButton.style.display = 'block';
-    } else {
-      newSubdomainInput.style.display = 'none';
-      addSubdomainButton.style.display = 'none';
-
-      const selectedSubdomain = select.value;
-      const protocol = 'https://';
-      const baseDomain = 'puter.site';
-      const newLink = `${protocol}${selectedSubdomain}.${baseDomain}`;
-      domainLink.href = newLink;
-      domainLink.textContent = newLink;
-    }
-    });
-
-    addSubdomainButton.addEventListener('click', async function() {
-      const newSubdomain = newSubdomainInput.value.trim();
-      // chamar a api do puter e verificar se o domínio já existe
-      if(puter.auth.isSignedIn()) {
-        //let result = await puter.hosting.get(newSubdomain);
-        //encontrar newSubdomain em this.listSubdomains
-        if (this.listSubdomains.find(domain => domain.subdomain === newSubdomain)) {
-          alert('Subdomínio já existe');
-          return;
-        }
-          // exibir o new-subdomain-input
-          const domainAvailable = this.$shadow.querySelector('#domain-available');
-          domainAvailable.style.display = 'block';
-        console.log(result)
-      }
-      debugger
-      // if (newSubdomain) {
-      //     this.listSubdomains.push({ subdomain: newSubdomain });
-      //     populateSelect();
-      //     select.value = newSubdomain;
-      //     const protocol = 'https://';
-      //     const baseDomain = 'puter.site';
-      //     const newLink = `${protocol}${selectedSubdomain}.${baseDomain}`;
-      //     domainLink.href = newLink;
-      //     domainLink.textContent = newLink;
-      //     newSubdomainInput.value = '';
-      //     newSubdomainInput.style.display = 'none';
-      //     addSubdomainButton.style.display = 'none';
-      // } else {
-      //     alert('Por favor, insira um subdomínio.');
-      // }
-    });
-
-        // Desabilitar atalhos de teclado ao focar no input
-        const shortcuts = (e) => {
-          e.stopPropagation();
-      };
-
-      newSubdomainInput.addEventListener('focus', function() {
-          document.addEventListener('keydown', shortcuts, true);
-      });
-
-      newSubdomainInput.addEventListener('blur', function() {
-          document.removeEventListener('keydown', shortcuts, true);
-      });
-
-
-    // Add event listener for the copy button
-    copyButton.addEventListener('click', () => {
-      const domainLink = `https://${this.siteDomain}.puter.site`;
-      navigator.clipboard.writeText(domainLink)
-        .then(() => {
-          console.log('Domain link copied to clipboard');
-          // Preciso de um feedback visual
-          const span = document.createElement('span');
-          span.textContent = 'Copiado';
-          span.style.color = 'green';
-          span.style.marginLeft = '5px';
-          copyButton.insertAdjacentElement('afterend', span);
-          setTimeout(() => {
-            span.remove();
-          }
-          , 2000);
-          
-        })
-        .catch((error) => {
-          console.error('Failed to copy domain link to clipboard:', error);
-        });
-    });
-  
-    // Add event listener for the close button
-    closeButton.addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
-
-    closeButtonSetup.addEventListener('click', () => {
-      setupModalDomain.style.display = 'none';
-    });
   }
 
 
@@ -750,17 +625,6 @@ applyChangesToMobileMediaQuery() {
       <input type="text" id="pixel-input" placeholder="Insira a Tag do Google">
       <button id="add-pixel-button">Adicionar</button>
     </div>
-
-    <div id="domain-modal" popover="manual" style="display: none; z-index: 1000">
-      <div class="modal-header">
-        <h2 class="modal-title">Site Publicado</h2>
-        <button id="close-modal" class="close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p>Seu site está disponível em: <a id="new-domain" href="https://${this.siteDomain}.puter.site" target="_blank">https://${this.siteDomain}.puter.site</a></p>
-        <button id="copy-button" class="success">Copiar link</button>
-      </div>
-    </div>
     `;
   }
 
@@ -787,33 +651,6 @@ applyChangesToMobileMediaQuery() {
     this.active_tool.attr('data-active', true)
     this.downloadHtmlWithStylesAndScripts();
     this.deactivate_feature = null
-  }
-
-  publish() {
-    const modal = this.$shadow.querySelector('#setup-domain-modal');
-    modal.style.display = 'flex';
-
-    const publishButton = this.$shadow.querySelector('#publish-button');
-    publishButton.onclick = () => {
-      const selectedDomain = this.$shadow.querySelector('#availables-domains');
-        if (selectedDomain) {
-          console.log(selectedDomain.value);
-          alert('Subdomínio selecionado: ' + selectedDomain.value);
-          // Aqui você pode adicionar o código para manipular o valor selecionado
-        } else {
-            alert('Por favor, selecione um subdomínio.');
-        }
-    };
-    // Exibir um prompt para o usuario informar o subdomínio do site
-    // const subdomain = prompt('Informe o subdomínio do site:');
-    // if (subdomain) {
-    //   this.sitename = subdomain;
-    //   this.createAndHostWebsite();
-    // }
-
-    console.log('publish')
-    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
-    this.active_tool.attr('data-active', true)
   }
 
   move() {
@@ -1113,7 +950,7 @@ applyChangesToMobileMediaQuery() {
 
     this.removeFacebookPixelsFromHeader(cloneDocument);
 
-    const htmlContent = cloneDocument.documentElement.outerHTML;
+    const htmlContent = cloneDocument.documentElement.outerHTML;  
 
     // Enviar o HTML para o backend e obter o HTML atualizado
     let updatedHtmlContent
