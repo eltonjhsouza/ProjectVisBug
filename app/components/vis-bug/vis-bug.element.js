@@ -496,10 +496,12 @@ applyChangesToMobileMediaQuery() {
            scriptContent.includes('gtag') ||
            scriptContent.includes('bundle.min.js') ||
            scriptContent.includes('chrome-extension') ||
+           scriptContent.includes('clarity') ||
            scriptSrc.includes('connect.facebook.net') ||
            scriptSrc.includes('www.googletagmanager.com') ||
            scriptSrc.includes('www.google-analytics.com') ||
-           scriptSrc.includes('google');
+           scriptSrc.includes('google') ||
+           scriptSrc.includes('clarity');
   });
 
   scriptsToRemove.forEach(script => {
