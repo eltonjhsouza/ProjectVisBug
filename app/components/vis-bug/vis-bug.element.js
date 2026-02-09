@@ -330,6 +330,7 @@ applyChangesToMobileMediaQuery() {
     this.$shadow.innerHTML = this.render();
 
     this.setupPuterModal();
+    this.setupInputModal();
 
     const switchViewButton = this.$shadow.querySelector('[data-tool="switchViewtodesktop"]');
     if (switchViewButton) {
@@ -443,16 +444,45 @@ applyChangesToMobileMediaQuery() {
     return !!modal && modal.style.display !== 'none';
   }
 
+  isInputModalOpen() {
+    const modal = this.$shadow.querySelector('#visbug-input-modal');
+    return !!modal && modal.style.display !== 'none';
+  }
+
+  getDeepActiveElement(root = document) {
+    let activeElement = root.activeElement;
+
+    while (activeElement && activeElement.shadowRoot && activeElement.shadowRoot.activeElement) {
+      activeElement = activeElement.shadowRoot.activeElement;
+    }
+
+    return activeElement;
+  }
+
+  isExternalAccessModalOpen() {
+    const modalHostIds = ['iacopi-input-modal', 'iacopi-email-access-modal'];
+
+    return modalHostIds.some(hostId => {
+      const host = document.getElementById(hostId);
+      if (!host || !host.shadowRoot) return false;
+      return !!host.shadowRoot.querySelector('[data-open="true"]');
+    });
+  }
+
   shouldIgnoreShortcuts(event) {
     const shadowActiveElement = this.$shadow.activeElement;
     const target = event && event.target;
     const activeElement = document.activeElement;
+    const deepActiveElement = this.getDeepActiveElement(document);
 
     if (this.isEditableElement(target)) return true;
     if (this.isEditableElement(activeElement)) return true;
     if (this.isEditableElement(shadowActiveElement)) return true;
+    if (this.isEditableElement(deepActiveElement)) return true;
 
     if (this.isPuterModalOpen()) return true;
+    if (this.isInputModalOpen()) return true;
+    if (this.isExternalAccessModalOpen()) return true;
 
     return false;
   }
@@ -497,22 +527,7 @@ applyChangesToMobileMediaQuery() {
     } else if (el.dataset.tool === 'text') {
       el.style.userSelect = 'all';
       this[el.dataset.tool]()
-    } else if (el.dataset.tool === 'addPixel') {
-      const pixelModal = this.$shadow.querySelector('#pixel-modal');
-      pixelModal.style.display = 'block';
-  
-      const addButton = this.$shadow.querySelector('#add-pixel-button');
-      addButton.onclick = () => {
-        const pixelInput = this.$shadow.querySelector('#pixel-input');
-        const pixelCode = pixelInput.value.trim();
-        if (pixelCode) {
-          this.pixelMeta = pixelCode
-          pixelModal.style.display = 'none';
-        }
-        pixelModal.style.display = 'none';
-      };
-    }
-    else {
+    } else {
       this[el.dataset.tool]()
     }
   }
@@ -629,8 +644,11 @@ applyChangesToMobileMediaQuery() {
           </li>
         `,'')}
       </li>
-       <li data-tool="switchView" data-key="switchView" id="sumir" class="mobile">
+      <li data-tool="switchView" data-key="switchView" id="sumir" class="mobile">
         ${Icons.mobile_device}
+      </li>
+      <li data-tool="emailAccess" aria-label="Configurar email" aria-description="Alterar ou remover e-mail de acesso">
+        ${Icons.email}
       </li>
       <!-- <li data-tool="link" aria-label="Change Link" aria-description="Change the link of an element">
         ${Icons.link}
@@ -778,6 +796,97 @@ applyChangesToMobileMediaQuery() {
         #puter-modal #puter-status[data-status='success'] {
           color: #0f766e;
         }
+        #visbug-input-modal {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647;
+          display: none;
+          font-family: 'Poppins', 'Montserrat', sans-serif;
+        }
+        #visbug-input-modal .visbug-input-backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(10, 15, 24, 0.55);
+          backdrop-filter: blur(6px);
+        }
+        #visbug-input-modal .visbug-input-card {
+          position: relative;
+          margin: 8vh auto;
+          width: min(460px, calc(100vw - 32px));
+          background: #ffffff;
+          border-radius: 18px;
+          box-shadow: 0 22px 60px rgba(15, 23, 42, 0.35);
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          overflow: hidden;
+          color: #0f172a;
+        }
+        #visbug-input-modal .visbug-input-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 20px;
+          background: linear-gradient(135deg, #0f766e, #1a8f82);
+          color: #f8fafc;
+        }
+        #visbug-input-modal .visbug-input-title {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        #visbug-input-modal .visbug-input-close {
+          border: none;
+          background: rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 600;
+        }
+        #visbug-input-modal .visbug-input-body {
+          padding: 20px;
+          display: grid;
+          gap: 12px;
+        }
+        #visbug-input-modal .visbug-input-message {
+          margin: 0;
+          color: #475569;
+          line-height: 1.4;
+          font-size: 14px;
+        }
+        #visbug-input-modal .visbug-input-label {
+          display: block;
+          margin-bottom: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        #visbug-input-modal .visbug-input-field {
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 10px;
+          border: 1px solid #cbd5f5;
+          font-size: 14px;
+          outline: none;
+        }
+        #visbug-input-modal .visbug-input-field:focus {
+          border-color: #0f766e;
+          box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+        }
+        #visbug-input-modal .visbug-input-actions {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+        }
+        #visbug-input-modal .visbug-input-confirm {
+          background: #0f766e;
+          color: #f8fafc;
+        }
+        #visbug-input-modal .visbug-input-cancel {
+          background: transparent;
+          color: #0f766e;
+          border: 1px solid rgba(15, 118, 110, 0.25);
+        }
       </style>
       <div id="puter-modal">
         <div class="puter-backdrop" data-puter-backdrop></div>
@@ -811,26 +920,26 @@ applyChangesToMobileMediaQuery() {
           </div>
         </div>
       </div>
-    <!-- Modal for adding Facebook Pixel -->
-    <div id="pixel-modal" style="display: none;">
-      <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
-      <button id="add-pixel-button">Adicionar</button>
-    </div>
-
-    <div id="ads-modal" style="display: none;">
-      <input type="text" id="gpixel-input" placeholder="Insira a Tag do Google">
-      <button id="add-ads-button">Adicionar</button>
-    </div>
-
-    <div id="gtm-modal" style="display: none;">
-      <input type="text" id="gtmpixel-input" placeholder="Insira o ID do GTM">
-      <button id="add-gtmpixel-button">Adicionar</button>
-    </div>
-
-    <div id="gtm-modal" style="display: none;">
-      <input type="text" id="pixel-input" placeholder="Insira a Tag do Google">
-      <button id="add-pixel-button">Adicionar</button>
-    </div>
+      <div id="visbug-input-modal">
+        <div class="visbug-input-backdrop" data-input-backdrop></div>
+        <form class="visbug-input-card" data-input-form autocomplete="off">
+          <div class="visbug-input-header">
+            <h2 class="visbug-input-title" data-input-title>Atualizar conteudo</h2>
+            <button class="visbug-input-close" data-input-close type="button">Fechar</button>
+          </div>
+          <div class="visbug-input-body">
+            <p class="visbug-input-message" data-input-message>Informe o novo valor.</p>
+            <div>
+              <label class="visbug-input-label" data-input-label for="visbug-input-field">Valor</label>
+              <input class="visbug-input-field" id="visbug-input-field" data-input-field type="text" />
+            </div>
+            <div class="visbug-input-actions">
+              <button class="visbug-input-confirm" data-input-confirm type="submit">Salvar</button>
+              <button class="visbug-input-cancel" data-input-cancel type="button">Cancelar</button>
+            </div>
+          </div>
+        </form>
+      </div>
     `;
   }
 
@@ -866,6 +975,13 @@ applyChangesToMobileMediaQuery() {
     this.deactivate_feature = null
   }
 
+  emailAccess() {
+    window.dispatchEvent(new CustomEvent('visbug:open-email-modal'))
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    if (this.active_tool) this.active_tool.attr('data-active', true)
+    this.deactivate_feature = null
+  }
+
   move() {
     this.deactivate_feature = Moveable(this.selectorEngine)
   }
@@ -873,46 +989,61 @@ applyChangesToMobileMediaQuery() {
     //this.dowloadProdxy()
   }
 
-  googlepixel() {
-    console.log('google')
-    const pixelGoogleModal = this.$shadow.querySelector('#ads-modal');
-    pixelGoogleModal.style.display = 'block';
+  async addPixel() {
+    const pixelCode = await this.openInputModal({
+      titleText: 'Pixel Meta',
+      messageText: 'Insira o codigo do Pixel do Meta.',
+      labelText: 'Codigo do pixel',
+      placeholder: 'Ex: 123456789012345',
+      value: this.pixelMeta || '',
+      confirmLabel: 'Salvar',
+      cancelLabel: 'Fechar'
+    });
 
-    const addButton = this.$shadow.querySelector('#add-ads-button');
-    addButton.onclick = () => {
-      const pixelInput = this.$shadow.querySelector('#gpixel-input');
-      const pixelCode = pixelInput.value.trim();
-      if (pixelCode) {
-        this.pixelGoogle = pixelCode
-        pixelGoogleModal.style.display = 'none';
-      }
-      pixelGoogleModal.style.display = 'none';
-    };
-
+    if (pixelCode !== null) {
+      this.pixelMeta = pixelCode;
+    }
 
     this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
-    this.active_tool.attr('data-active', true)
+    if (this.active_tool) this.active_tool.attr('data-active', true)
   }
-  
-  gtmGoogle() {
-    console.log('GTM')
-    const pixelGtmGoogle = this.$shadow.querySelector('#gtm-modal');
-    pixelGtmGoogle.style.display = 'block';
 
-    const addButton = this.$shadow.querySelector('#add-gtmpixel-button');
-    addButton.onclick = () => {
-      const pixelInput = this.$shadow.querySelector('#gtmpixel-input');
-      const pixelCode = pixelInput.value.trim();
-      if (pixelCode) {
-        this.gtmCode = pixelCode
-        pixelGtmGoogle.style.display = 'none';
-      }
-      pixelGtmGoogle.style.display = 'none';
-    };
+  async googlepixel() {
+    const pixelCode = await this.openInputModal({
+      titleText: 'Pixel Google Ads',
+      messageText: 'Insira a tag do Google Ads.',
+      labelText: 'Tag Google',
+      placeholder: 'AW-XXXXXXXXX',
+      value: this.pixelGoogle || '',
+      confirmLabel: 'Salvar',
+      cancelLabel: 'Fechar'
+    });
 
+    if (pixelCode !== null) {
+      this.pixelGoogle = pixelCode;
+    }
 
     this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
-    this.active_tool.attr('data-active', true)
+    if (this.active_tool) this.active_tool.attr('data-active', true)
+  }
+
+  async gtmGoogle() {
+    const gtmCode = await this.openInputModal({
+      titleText: 'Google Tag Manager',
+      messageText: 'Insira o ID do GTM.',
+      labelText: 'ID do GTM',
+      placeholder: 'GTM-XXXXXXX',
+      value: this.gtmCode || '',
+      confirmLabel: 'Salvar',
+      cancelLabel: 'Fechar'
+    });
+
+    if (gtmCode !== null) {
+      this.gtmCode = gtmCode;
+    }
+
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    if (this.active_tool) this.active_tool.attr('data-active', true)
   }
   margin() {
     this.deactivate_feature = Margin(this.selectorEngine)
@@ -1029,6 +1160,94 @@ applyChangesToMobileMediaQuery() {
     };
 
     return this.puterModalElements;
+  }
+
+  setupInputModal() {
+    const modalElements = this.getInputModalElements();
+    if (!modalElements) return;
+
+    const { backdrop, closeButton, cancelButton, form, input } = modalElements;
+
+    const closeModal = () => this.closeInputModal(null);
+    backdrop.addEventListener('click', closeModal);
+    closeButton.addEventListener('click', closeModal);
+    cancelButton.addEventListener('click', closeModal);
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      this.closeInputModal(input.value.trim());
+    });
+  }
+
+  getInputModalElements() {
+    if (this.inputModalElements) return this.inputModalElements;
+
+    const modal = this.$shadow.querySelector('#visbug-input-modal');
+    if (!modal) return null;
+
+    this.inputModalElements = {
+      modal,
+      backdrop: modal.querySelector('[data-input-backdrop]'),
+      form: modal.querySelector('[data-input-form]'),
+      title: modal.querySelector('[data-input-title]'),
+      message: modal.querySelector('[data-input-message]'),
+      label: modal.querySelector('[data-input-label]'),
+      input: modal.querySelector('[data-input-field]'),
+      confirmButton: modal.querySelector('[data-input-confirm]'),
+      cancelButton: modal.querySelector('[data-input-cancel]'),
+      closeButton: modal.querySelector('[data-input-close]')
+    };
+
+    return this.inputModalElements;
+  }
+
+  openInputModal(options = {}) {
+    const modalElements = this.getInputModalElements();
+    if (!modalElements) return Promise.resolve(null);
+
+    const {
+      titleText = 'Atualizar conteudo',
+      messageText = 'Informe o novo valor.',
+      labelText = 'Valor',
+      placeholder = '',
+      value = '',
+      confirmLabel = 'Salvar',
+      cancelLabel = 'Fechar'
+    } = options;
+
+    if (this.inputModalResolver) {
+      this.inputModalResolver(null);
+      this.inputModalResolver = null;
+    }
+
+    modalElements.title.textContent = titleText;
+    modalElements.message.textContent = messageText;
+    modalElements.label.textContent = labelText;
+    modalElements.input.placeholder = placeholder;
+    modalElements.input.value = value;
+    modalElements.confirmButton.textContent = confirmLabel;
+    modalElements.cancelButton.textContent = cancelLabel;
+
+    modalElements.modal.style.display = 'block';
+    modalElements.input.focus();
+    modalElements.input.select();
+
+    return new Promise(resolve => {
+      this.inputModalResolver = resolve;
+    });
+  }
+
+  closeInputModal(value) {
+    const modalElements = this.getInputModalElements();
+    if (!modalElements) return;
+
+    modalElements.modal.style.display = 'none';
+
+    if (this.inputModalResolver) {
+      const resolve = this.inputModalResolver;
+      this.inputModalResolver = null;
+      resolve(value);
+    }
   }
 
   async openPuterPublishModal() {

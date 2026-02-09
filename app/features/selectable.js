@@ -29,6 +29,52 @@ const requestTextInput = options => {
 const createTextInputModal = () => {
   let resolveRequest = null
   let previousOverflow = null
+  let hiddenOverlayNodes = []
+  let hiddenSelectedNodes = []
+
+  const overlaySelector = [
+    'visbug-handles',
+    'visbug-label',
+    'visbug-hover',
+    'visbug-grip',
+    'visbug-corners',
+    'visbug-gridlines',
+    'visbug-distance',
+    'visbug-metatip',
+    'visbug-ally',
+    'visbug-box-model'
+  ].join(',')
+
+  const hideVisbugDecorators = () => {
+    hiddenOverlayNodes = []
+    hiddenSelectedNodes = []
+
+    document.querySelectorAll(overlaySelector).forEach(node => {
+      hiddenOverlayNodes.push({ node, display: node.style.display })
+      node.style.display = 'none'
+    })
+
+    document.querySelectorAll('[data-selected]').forEach(node => {
+      hiddenSelectedNodes.push({ node, value: node.getAttribute('data-selected-hide') })
+      node.setAttribute('data-selected-hide', 'true')
+    })
+  }
+
+  const restoreVisbugDecorators = () => {
+    hiddenOverlayNodes.forEach(({node, display}) => {
+      if (!node || !node.isConnected) return
+      node.style.display = display || ''
+    })
+
+    hiddenSelectedNodes.forEach(({node, value}) => {
+      if (!node || !node.isConnected) return
+      if (value === null) node.removeAttribute('data-selected-hide')
+      else node.setAttribute('data-selected-hide', value)
+    })
+
+    hiddenOverlayNodes = []
+    hiddenSelectedNodes = []
+  }
 
   const hostId = 'iacopi-input-modal'
   let host = document.getElementById(hostId)
@@ -75,6 +121,9 @@ const createTextInputModal = () => {
         color: #0f172a;
       }
       .iacopi-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         padding: 18px 20px;
         background: linear-gradient(135deg, #0f766e, #1a8f82);
         color: #f8fafc;
@@ -82,6 +131,16 @@ const createTextInputModal = () => {
       .iacopi-title {
         margin: 0;
         font-size: 18px;
+      }
+      .iacopi-close {
+        border: none;
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
       }
       .iacopi-body {
         padding: 20px;
@@ -138,6 +197,7 @@ const createTextInputModal = () => {
       <form class="iacopi-card" autocomplete="off">
         <div class="iacopi-header">
           <h2 class="iacopi-title" data-title></h2>
+          <button class="iacopi-close" type="button" data-close>Fechar</button>
         </div>
         <div class="iacopi-body">
           <p class="iacopi-message" data-message></p>
@@ -162,9 +222,15 @@ const createTextInputModal = () => {
   const input = shadow.querySelector('[data-input]')
   const confirmButton = shadow.querySelector('[data-confirm]')
   const cancelButton = shadow.querySelector('[data-cancel]')
+  const closeButton = shadow.querySelector('[data-close]')
 
   const open = (options = {}) => {
     if (resolveRequest) {
+      if (previousOverflow !== null) {
+        document.documentElement.style.overflow = previousOverflow
+        previousOverflow = null
+      }
+      restoreVisbugDecorators()
       resolveRequest(null)
       resolveRequest = null
     }
@@ -193,6 +259,8 @@ const createTextInputModal = () => {
       document.documentElement.style.overflow = 'hidden'
     }
 
+    hideVisbugDecorators()
+
     input.focus()
     input.select()
 
@@ -208,6 +276,8 @@ const createTextInputModal = () => {
       previousOverflow = null
     }
 
+    restoreVisbugDecorators()
+
     if (resolveRequest) {
       const resolve = resolveRequest
       resolveRequest = null
@@ -221,6 +291,7 @@ const createTextInputModal = () => {
   })
 
   cancelButton.addEventListener('click', () => close(null))
+  closeButton.addEventListener('click', () => close(null))
   overlay.addEventListener('click', event => {
     if (event.target === overlay) close(null)
   })
