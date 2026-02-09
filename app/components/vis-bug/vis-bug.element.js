@@ -1285,11 +1285,21 @@ applyChangesToMobileMediaQuery() {
     this.setPuterLoading(true);
     this.setPuterStatus('Publicando site...', 'info');
     try {
-      await this.publishToPuter(subdomain);
-      modalElements.siteUrl.textContent = `https://${subdomain}.puter.site`;
-      modalElements.siteUrl.href = `https://${subdomain}.puter.site`;
+      const publishResult = await this.publishToPuter(subdomain);
+      const normalizedSubdomain = publishResult && publishResult.subdomain ? publishResult.subdomain : subdomain;
+      const cacheBuster = publishResult && publishResult.publishId ? publishResult.publishId : Date.now();
+      modalElements.siteUrl.textContent = `https://${normalizedSubdomain}.puter.site`;
+      modalElements.siteUrl.href = `https://${normalizedSubdomain}.puter.site/?v=${cacheBuster}`;
       modalElements.siteUrl.style.display = 'inline-flex';
-      this.setPuterStatus('Publicado com sucesso.', 'success');
+      this.setPuterStatus('Publicado com sucesso. Se aparecer versao antiga, abra o link novamente.', 'success');
+
+      try {
+        window.open(modalElements.siteUrl.href, '_blank');
+      } catch (openError) {
+        console.warn('[VisBug] Could not open preview tab automatically:', openError);
+      }
+
+      await this.refreshPuterSites(normalizedSubdomain);
     } catch (error) {
       console.error('[VisBug] Publish error:', error);
       this.setPuterStatus(`Erro ao publicar no Puter: ${error.message || 'desconhecido'}`, 'error');
@@ -1345,6 +1355,19 @@ applyChangesToMobileMediaQuery() {
       }
       await puter.hosting.update(normalizedSubdomain, dirPath);
     }
+
+    try {
+      const siteInfo = await puter.hosting.get(normalizedSubdomain);
+      console.log('[VisBug] hosting.get after publish:', siteInfo);
+    } catch (getError) {
+      console.warn('[VisBug] hosting.get after publish failed:', getError);
+    }
+
+    return {
+      subdomain: normalizedSubdomain,
+      dirPath,
+      publishId: Date.now()
+    };
   }
 
   setPuterStatus(message, type) {
