@@ -1,6 +1,6 @@
 import $ from 'blingblingjs'
 import hotkeys from 'hotkeys-js'
-import { showHideNodeLabel } from '../utilities/'
+import { showHideNodeLabel, metaKey } from '../utilities/'
 
 const removeEditability = ({target}) => {
   target.removeAttribute('contenteditable')
@@ -10,7 +10,28 @@ const removeEditability = ({target}) => {
   hotkeys.unbind('escape,esc')
 }
 
-const stopBubbling = e => e.key != 'Escape' && e.stopPropagation()
+const isMetaShortcutPressed = event =>
+  metaKey === 'cmd'
+    ? event.metaKey
+    : event.ctrlKey
+
+const isAllowedEditingShortcut = event => {
+  if (!isMetaShortcutPressed(event)) return false
+
+  const key = (event.key || '').toLowerCase()
+
+  if (!event.altKey && !event.shiftKey && key === 'd') return true
+  if (event.shiftKey && !event.altKey && (key === 'c' || key === 'v')) return true
+  if (event.altKey && !event.shiftKey && (key === 'c' || key === 'v')) return true
+
+  return false
+}
+
+const stopBubbling = e => {
+  if (e.key === 'Escape') return
+  if (isAllowedEditingShortcut(e)) return
+  e.stopPropagation()
+}
 
 const cleanup = (e, handler) => {
   $('[spellcheck="true"]').forEach(target => removeEditability({target}))

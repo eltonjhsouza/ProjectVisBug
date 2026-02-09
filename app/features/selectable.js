@@ -314,6 +314,23 @@ export function Selectable(visbug) {
   let labels              = []
   let handles             = []
 
+  const copyStyleShortcuts = `${metaKey}+alt+c,${metaKey}+shift+c`
+  const pasteStyleShortcuts = `${metaKey}+alt+v,${metaKey}+shift+v`
+  const selectableShortcuts = [
+    copyStyleShortcuts,
+    pasteStyleShortcuts,
+    'esc',
+    `${metaKey}+d`,
+    `${metaKey}+l`,
+    'del,delete',
+    'alt+del,alt+backspace',
+    `${metaKey}+e,${metaKey}+shift+e`,
+    `${metaKey}+g,${metaKey}+shift+g`,
+    'tab,shift+tab,enter,shift+enter',
+    `${metaKey}+shift+enter`,
+    `shift+'`
+  ].join(',')
+
   const hover_state       = {
     target:   null,
     element:  null,
@@ -332,8 +349,8 @@ export function Selectable(visbug) {
 
     watchCommandKey()
 
-    hotkeys(`${metaKey}+alt+c`, on_copy_styles)
-    hotkeys(`${metaKey}+alt+v`, e => on_paste_styles())
+    hotkeys(copyStyleShortcuts, on_copy_styles)
+    hotkeys(pasteStyleShortcuts, on_paste_styles)
     hotkeys('esc', on_esc)
     hotkeys(`${metaKey}+d`, on_duplicate)
     hotkeys(`${metaKey}+l`, on_InsertLink)
@@ -357,7 +374,7 @@ export function Selectable(visbug) {
     document.removeEventListener('cut', on_cut)
     document.removeEventListener('paste', on_paste)
 
-    hotkeys.unbind(`esc,${metaKey}+d,backspace,del,delete,alt+del,alt+backspace,${metaKey}+e,${metaKey}+shift+e,${metaKey}+g,${metaKey}+shift+g,tab,shift+tab,enter,shift+enter`)
+    hotkeys.unbind(selectableShortcuts)
   }
 
   const on_click = e => {
@@ -591,13 +608,15 @@ export function Selectable(visbug) {
     unselect_all()
 
   const on_duplicate = e => {
+    e.preventDefault()
+    e.stopPropagation()
+
     const root_node = selected[0]
     if (!root_node) return
 
     const deep_clone = root_node.cloneNode(true)
     deep_clone.removeAttribute('data-selected')
     root_node.parentNode.insertBefore(deep_clone, root_node.nextSibling)
-    e.preventDefault()
   }
 
   const on_InsertLink = async e => {
@@ -694,6 +713,9 @@ export function Selectable(visbug) {
 
   const on_copy_styles = async e => {
     e.preventDefault()
+    e.stopPropagation()
+
+    if (!selected.length) return
 
     window.copied_styles = selected.map(el =>
       getStyles(el))
@@ -732,6 +754,11 @@ export function Selectable(visbug) {
   }
 
   const on_paste_styles = async (e, index = 0) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!selected.length) return
+
     if (window.copied_styles) {
       selected.forEach(el => {
         window.copied_styles[index]

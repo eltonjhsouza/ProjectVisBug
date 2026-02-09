@@ -439,6 +439,20 @@ applyChangesToMobileMediaQuery() {
     return false;
   }
 
+  isFormEditableElement(element) {
+    if (!element) return false;
+    const tagName = element.tagName;
+    if (!tagName) return false;
+
+    const inputTypesToIgnore = ['checkbox', 'radio', 'range', 'button', 'file', 'reset', 'submit', 'color'];
+    if (tagName === 'INPUT') return !inputTypesToIgnore.includes(element.type);
+    return tagName === 'TEXTAREA' || tagName === 'SELECT';
+  }
+
+  isContentEditableElement(element) {
+    return !!(element && element.isContentEditable);
+  }
+
   isPuterModalOpen() {
     const modal = this.$shadow.querySelector('#puter-modal');
     return !!modal && modal.style.display !== 'none';
@@ -469,20 +483,48 @@ applyChangesToMobileMediaQuery() {
     });
   }
 
+  isAllowedEditingShortcut(event) {
+    if (!event) return false;
+
+    const usesMetaShortcut = metaKey === 'cmd'
+      ? event.metaKey
+      : event.ctrlKey;
+
+    if (!usesMetaShortcut) return false;
+
+    const key = (event.key || '').toLowerCase();
+
+    if (!event.altKey && !event.shiftKey && key === 'd') return true;
+    if (event.shiftKey && !event.altKey && (key === 'c' || key === 'v')) return true;
+    if (event.altKey && !event.shiftKey && (key === 'c' || key === 'v')) return true;
+
+    return false;
+  }
+
   shouldIgnoreShortcuts(event) {
     const shadowActiveElement = this.$shadow.activeElement;
     const target = event && event.target;
     const activeElement = document.activeElement;
     const deepActiveElement = this.getDeepActiveElement(document);
 
+    if (this.isPuterModalOpen()) return true;
+    if (this.isInputModalOpen()) return true;
+    if (this.isExternalAccessModalOpen()) return true;
+
+    const editableElements = [target, activeElement, shadowActiveElement, deepActiveElement]
+      .filter(Boolean);
+
+    const isTypingInFormField = editableElements.some(element => this.isFormEditableElement(element));
+    if (isTypingInFormField) return true;
+
+    const isTypingInContentEditable = editableElements.some(element => this.isContentEditableElement(element));
+    if (isTypingInContentEditable)
+      return !this.isAllowedEditingShortcut(event);
+
     if (this.isEditableElement(target)) return true;
     if (this.isEditableElement(activeElement)) return true;
     if (this.isEditableElement(shadowActiveElement)) return true;
     if (this.isEditableElement(deepActiveElement)) return true;
-
-    if (this.isPuterModalOpen()) return true;
-    if (this.isInputModalOpen()) return true;
-    if (this.isExternalAccessModalOpen()) return true;
 
     return false;
   }
