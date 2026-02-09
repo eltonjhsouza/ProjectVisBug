@@ -314,6 +314,11 @@ applyChangesToMobileMediaQuery() {
       Object.keys(this.toolbar_model).reduce((events, key) =>
         events += ',' + key, ''))
     hotkeys.unbind(`${metaKey}+/`)
+
+    if (this._defaultHotkeysFilter) {
+      hotkeys.filter = this._defaultHotkeysFilter
+      this._defaultHotkeysFilter = null
+    }
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -323,6 +328,8 @@ applyChangesToMobileMediaQuery() {
 
   setup() {
     this.$shadow.innerHTML = this.render();
+
+    this.setupPuterModal();
 
     const switchViewButton = this.$shadow.querySelector('[data-tool="switchViewtodesktop"]');
     if (switchViewButton) {
@@ -344,6 +351,14 @@ applyChangesToMobileMediaQuery() {
     const buttonPieces = $('li[data-tool], li[data-tool] *', main_ol);
   
     this.inputFocused = false;
+
+    this._defaultHotkeysFilter = hotkeys.filter;
+    hotkeys.filter = event => {
+      if (this.shouldIgnoreShortcuts(event)) return false;
+      return this._defaultHotkeysFilter
+        ? this._defaultHotkeysFilter.call(hotkeys, event)
+        : true;
+    };
     
     const clickEvent = (e) => {
       const target = e.currentTarget || e.target;
@@ -392,23 +407,54 @@ applyChangesToMobileMediaQuery() {
   
     Object.entries(this.toolbar_model).forEach(([key, value]) =>
       hotkeys(key, e => {
-        // if (!this.inputFocused) {
-          e.preventDefault();
-          this.toolSelected(
-            $(`[data-tool="${value.tool}"]`, this.$shadow)[0]
-          );
-        // }
+        if (this.shouldIgnoreShortcuts(e)) return;
+        e.preventDefault();
+        this.toolSelected(
+          $(`[data-tool="${value.tool}"]`, this.$shadow)[0]
+        );
       })
     );
   
     hotkeys(`${metaKey}+/,${metaKey}+.`, e => {
-      if (!this.inputFocused) {
-        this.$shadow.host.style.display =
-          this.$shadow.host.style.display === 'none'
-            ? 'block'
-            : 'none';
-      }
+      if (this.shouldIgnoreShortcuts(e)) return;
+      this.$shadow.host.style.display =
+        this.$shadow.host.style.display === 'none'
+          ? 'block'
+          : 'none';
     });
+  }
+
+  isEditableElement(element) {
+    if (!element) return false;
+    const tagName = element.tagName;
+    if (!tagName) return false;
+
+    if (element.isContentEditable) return true;
+
+    const inputTypesToIgnore = ['checkbox', 'radio', 'range', 'button', 'file', 'reset', 'submit', 'color'];
+    if (tagName === 'INPUT') return !inputTypesToIgnore.includes(element.type);
+    if (tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+
+    return false;
+  }
+
+  isPuterModalOpen() {
+    const modal = this.$shadow.querySelector('#puter-modal');
+    return !!modal && modal.style.display !== 'none';
+  }
+
+  shouldIgnoreShortcuts(event) {
+    const shadowActiveElement = this.$shadow.activeElement;
+    const target = event && event.target;
+    const activeElement = document.activeElement;
+
+    if (this.isEditableElement(target)) return true;
+    if (this.isEditableElement(activeElement)) return true;
+    if (this.isEditableElement(shadowActiveElement)) return true;
+
+    if (this.isPuterModalOpen()) return true;
+
+    return false;
   }
   
 
@@ -607,6 +653,164 @@ applyChangesToMobileMediaQuery() {
           ${Icons.border_icon}
         </li>
       </ol>
+      <style>
+        #puter-modal {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647;
+          display: none;
+          font-family: 'Poppins', 'Montserrat', sans-serif;
+        }
+        #puter-modal .puter-backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(10, 15, 24, 0.55);
+          backdrop-filter: blur(6px);
+        }
+        #puter-modal .puter-card {
+          position: relative;
+          margin: 6vh auto;
+          width: min(520px, calc(100vw - 32px));
+          background: #ffffff;
+          border-radius: 18px;
+          box-shadow: 0 22px 60px rgba(15, 23, 42, 0.35);
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          overflow: hidden;
+          color: #0f172a;
+        }
+        #puter-modal .puter-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 20px;
+          background: linear-gradient(135deg, #0f766e, #1a8f82);
+          color: #f8fafc;
+        }
+        #puter-modal .puter-title {
+          font-size: 18px;
+          font-weight: 700;
+        }
+        #puter-modal .puter-close {
+          border: none;
+          background: rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+        #puter-modal .puter-body {
+          padding: 20px;
+          display: grid;
+          gap: 16px;
+        }
+        #puter-modal .puter-section {
+          display: grid;
+          gap: 10px;
+        }
+        #puter-modal .puter-section-title {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: #64748b;
+        }
+        #puter-modal .puter-row {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 10px;
+          align-items: center;
+        }
+        #puter-modal select,
+        #puter-modal input {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid #cbd5f5;
+          font-size: 14px;
+          outline: none;
+        }
+        #puter-modal select:focus,
+        #puter-modal input:focus {
+          border-color: #0f766e;
+          box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+        }
+        #puter-modal button {
+          border: none;
+          border-radius: 10px;
+          padding: 10px 14px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        #puter-modal #puter-auth-button,
+        #puter-modal #puter-create-domain {
+          background: #0f766e;
+          color: #f8fafc;
+        }
+        #puter-modal #puter-switch-account {
+          background: transparent;
+          color: #64748b;
+          border: 1px solid #cbd5f5;
+        }
+        #puter-modal #puter-switch-account:hover {
+          border-color: #475569;
+          color: #475569;
+        }
+        #puter-modal #puter-publish {
+          background: #2563eb;
+          color: #f8fafc;
+        }
+        #puter-modal #puter-site-url {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #2563eb;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 13px;
+        }
+        #puter-modal #puter-status {
+          font-size: 12px;
+          color: #64748b;
+        }
+        #puter-modal #puter-status[data-status='error'] {
+          color: #b91c1c;
+        }
+        #puter-modal #puter-status[data-status='success'] {
+          color: #0f766e;
+        }
+      </style>
+      <div id="puter-modal">
+        <div class="puter-backdrop" data-puter-backdrop></div>
+        <div class="puter-card">
+          <div class="puter-header">
+            <div class="puter-title">Publicar no Puter</div>
+            <button id="puter-close" class="puter-close" type="button">Fechar</button>
+          </div>
+          <div class="puter-body">
+            <div class="puter-section">
+              <div class="puter-section-title">Conta Puter</div>
+              <div class="puter-row">
+                <div id="puter-auth-status">Desconectado</div>
+                <button id="puter-auth-button" type="button">Conectar com Puter</button>
+                <button id="puter-switch-account" type="button" style="display: none;">Trocar conta</button>
+              </div>
+            </div>
+            <div class="puter-section">
+              <div class="puter-section-title">Dominios</div>
+              <select id="puter-domain-select"></select>
+              <div class="puter-row">
+                <input id="puter-domain-input" type="text" placeholder="meusite" />
+                <button id="puter-create-domain" type="button">Criar dominio</button>
+              </div>
+            </div>
+            <div class="puter-section">
+              <button id="puter-publish" type="button">Publicar</button>
+              <a id="puter-site-url" href="#" target="_blank" rel="noopener">Abrir site</a>
+            </div>
+            <div id="puter-status"></div>
+          </div>
+        </div>
+      </div>
     <!-- Modal for adding Facebook Pixel -->
     <div id="pixel-modal" style="display: none;">
       <input type="text" id="pixel-input" placeholder="Insira o código do pixel do Facebook">
@@ -652,6 +856,13 @@ applyChangesToMobileMediaQuery() {
     this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
     this.active_tool.attr('data-active', true)
     this.downloadHtmlWithStylesAndScripts();
+    this.deactivate_feature = null
+  }
+
+  publish() {
+    this.active_tool = $('[data-tool="inspector"]', this.$shadow)[0]
+    if (this.active_tool) this.active_tool.attr('data-active', true)
+    this.openPuterPublishModal();
     this.deactivate_feature = null
   }
 
@@ -769,48 +980,392 @@ applyChangesToMobileMediaQuery() {
     `;
   }
 
-  async loadPuterScript() {
-    return new Promise((resolve, reject) => {
-      const head = document.head || document.getElementsByTagName('head')[0];
-      const script = document.createElement('script');
-      script.src = 'https://js.puter.com/v2/';
-      script.onload = resolve;
-      script.onerror = reject;
-      head.appendChild(script);
+  setupPuterModal() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    const {
+      backdrop,
+      closeButton,
+      authButton,
+      createButton,
+      publishButton,
+      domainInput,
+      switchAccountButton
+    } = modalElements;
+
+    backdrop.addEventListener('click', () => this.closePuterPublishModal());
+    closeButton.addEventListener('click', () => this.closePuterPublishModal());
+    authButton.addEventListener('click', () => this.handlePuterSignIn());
+    switchAccountButton.addEventListener('click', () => this.handlePuterSwitchAccount());
+    createButton.addEventListener('click', () => this.handlePuterCreateDomain());
+    publishButton.addEventListener('click', () => this.handlePuterPublish());
+    domainInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.handlePuterCreateDomain();
+      }
     });
   }
 
-  async createAndHostWebsite() {
+  getPuterModalElements() {
+    if (this.puterModalElements) return this.puterModalElements;
+    const modal = this.$shadow.querySelector('#puter-modal');
+    if (!modal) return null;
+
+    this.puterModalElements = {
+      modal,
+      backdrop: modal.querySelector('[data-puter-backdrop]'),
+      closeButton: modal.querySelector('#puter-close'),
+      authStatus: modal.querySelector('#puter-auth-status'),
+      authButton: modal.querySelector('#puter-auth-button'),
+      switchAccountButton: modal.querySelector('#puter-switch-account'),
+      domainSelect: modal.querySelector('#puter-domain-select'),
+      domainInput: modal.querySelector('#puter-domain-input'),
+      createButton: modal.querySelector('#puter-create-domain'),
+      publishButton: modal.querySelector('#puter-publish'),
+      status: modal.querySelector('#puter-status'),
+      siteUrl: modal.querySelector('#puter-site-url')
+    };
+
+    return this.puterModalElements;
+  }
+
+  async openPuterPublishModal() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    modalElements.modal.style.display = 'block';
+    modalElements.siteUrl.style.display = 'none';
+    modalElements.status.textContent = '';
+    this.setPuterStatus('Carregando Puter...', 'info');
+
     try {
-      await this.loadPuterScript();
-
-      await puter.fs.mkdir(this.sitename);
-  
-      // (2) Create 'index.html' in the directory with the contents "Hello, world!"
-      //Buscar o conteúdo da página atual e salvar em this.globalPageContent
-      //this.globalPageContent = document.documentElement.outerHTML;
-      let html = await this.generateHtmlWithStylesAndScripts();
-
-      
-      await puter.fs.write(`${this.sitename}/index.html`, html);
-  
-      // (3) Host the directory under a random subdomain
-      let subdomain = this.sitename;
-      this.siteDomain = subdomain;
-      const site = await puter.hosting.create(subdomain, this.sitename);
-
-      // Exibir o modal com o link do site
-      const modal = this.$shadow.querySelector('#domain-modal');
-      modal.style.display = 'block';
-      // Alterar o texto e href de #new-domain
-      const newDomain = modal.querySelector('#new-domain');
-      newDomain.textContent = `https://${site.subdomain}.puter.site`;
-      newDomain.href = `https://${site.subdomain}.puter.site`;
-
-      //window.open(`https://${site.subdomain}.puter.site`, '_blank');
+      await this.ensurePuter();
+      await this.updatePuterAuthStatus();
+      await this.refreshPuterSites();
     } catch (error) {
-      document.write(`An error occurred: ${error.message}`);
+      this.setPuterStatus('Nao foi possivel carregar o Puter.', 'error');
     }
+  }
+
+  closePuterPublishModal() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+    modalElements.modal.style.display = 'none';
+  }
+
+  async ensurePuter() {
+    if (window.puter) {
+      // Garantir AppID padrao, mas sem sobrescrever um app UID ja definido
+      const currentAppID = window.puter.appID;
+      if (
+        typeof window.puter.setAppID === 'function'
+        && (!currentAppID || currentAppID === 'puter.com' || currentAppID === 'visbug')
+      ) {
+        window.puter.setAppID('visbug');
+      }
+      console.log('[VisBug] Puter ready, appID:', window.puter.appID);
+      return window.puter;
+    }
+    
+    if (!window.__visbugPuterLoader) {
+      console.log('[VisBug] Loading Puter SDK...');
+      window.__visbugPuterLoader = new Promise((resolve, reject) => {
+        const head = document.head || document.getElementsByTagName('head')[0];
+        const script = document.createElement('script');
+        script.src = 'https://js.puter.com/v2/';
+        script.onload = () => {
+          // Definir AppID fixo imediatamente apos carregar
+          if (typeof window.puter.setAppID === 'function') {
+            window.puter.setAppID('visbug');
+          }
+          console.log('[VisBug] Puter SDK loaded, appID:', window.puter.appID);
+          resolve(window.puter);
+        };
+        script.onerror = (error) => {
+          console.error('[VisBug] Failed to load Puter SDK:', error);
+          reject(error);
+        };
+        head.appendChild(script);
+      });
+    }
+
+    return window.__visbugPuterLoader;
+  }
+
+  async isPuterSignedIn() {
+    try {
+      const puter = await this.ensurePuter();
+      return await puter.auth.isSignedIn();
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async ensurePuterSubdomainPermissions({ manage = false } = {}) {
+    try {
+      const puter = await this.ensurePuter();
+      if (!puter.perms) return true;
+
+      let hasRead = true;
+      if (typeof puter.perms.requestReadSubdomains === 'function') {
+        hasRead = await puter.perms.requestReadSubdomains();
+      }
+
+      if (!hasRead) return false;
+
+      if (manage && typeof puter.perms.requestManageSubdomains === 'function') {
+        const hasManage = await puter.perms.requestManageSubdomains();
+        return !!hasManage;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[VisBug] Permission request error:', error);
+      return false;
+    }
+  }
+
+  async updatePuterAuthStatus() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+    const signedIn = await this.isPuterSignedIn();
+
+    modalElements.authStatus.textContent = signedIn ? 'Conectado' : 'Desconectado';
+    modalElements.authButton.textContent = signedIn ? 'Conectado' : 'Conectar com Puter';
+    modalElements.authButton.disabled = signedIn;
+    modalElements.switchAccountButton.style.display = signedIn ? 'block' : 'none';
+  }
+
+  async handlePuterSwitchAccount() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    try {
+      const puter = await this.ensurePuter();
+      if (puter.auth && typeof puter.auth.signOut === 'function') {
+        await puter.auth.signOut();
+        console.log('[VisBug] Signed out successfully');
+      }
+      
+      // Clear domains list
+      modalElements.domainSelect.innerHTML = '';
+      
+      // Update UI
+      await this.updatePuterAuthStatus();
+      console.log('[VisBug] Prompting for sign in again');
+      // Prompt for sign in again
+      this.handlePuterSignIn();
+    } catch (error) {
+      console.error('[VisBug] Error switching account:', error);
+    }
+  }
+
+  async handlePuterSignIn() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    this.setPuterLoading(true);
+    try {
+      const puter = await this.ensurePuter();
+      
+      // Simple sign-in like iacopi2.0 - no AppID, no permissions
+      console.log('[VisBug] Calling puter.auth.signIn()...');
+      await puter.auth.signIn();
+      console.log('[VisBug] Sign-in complete');
+      
+      const user = await puter.auth.getUser();
+      console.log('[VisBug] Logged in as:', user?.username || 'unknown');
+      
+      await this.updatePuterAuthStatus();
+      await this.refreshPuterSites();
+      this.setPuterStatus('Conta conectada com sucesso.', 'success');
+    } catch (error) {
+      console.error('[VisBug] Sign in error:', error);
+      this.setPuterStatus('Erro ao conectar: ' + (error.message || 'Desconhecido'), 'error');
+    } finally {
+      this.setPuterLoading(false);
+    }
+  }
+
+  async refreshPuterSites(selected) {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    const signedIn = await this.isPuterSignedIn();
+    console.log('[VisBug] refreshPuterSites - signedIn:', signedIn);
+    if (!signedIn) {
+      modalElements.domainSelect.innerHTML = '<option value="">Conecte sua conta para listar</option>';
+      return;
+    }
+
+    // Show loading state
+    modalElements.domainSelect.innerHTML = '<option value="">Carregando dominios...</option>';
+    modalElements.domainSelect.disabled = true;
+
+    try {
+      const puter = await this.ensurePuter();
+      console.log('[VisBug] Calling puter.hosting.list()...');
+      
+      const sites = await puter.hosting.list();
+      console.log('[VisBug] Sites returned:', JSON.stringify(sites));
+      
+      this.listSubdomains = Array.isArray(sites) ? sites : [];
+
+      const appUIDFromSites = this.listSubdomains.find(site => site && site.app_owner && site.app_owner.uid)?.app_owner?.uid;
+      if (appUIDFromSites && typeof puter.setAppID === 'function' && puter.appID !== appUIDFromSites) {
+        console.log('[VisBug] Aligning appID with listed domains app owner:', appUIDFromSites);
+        puter.setAppID(appUIDFromSites);
+      }
+      
+      const options = this.listSubdomains.length
+        ? this.listSubdomains.map(site => {
+            const subdomain = site.subdomain || site;
+            return `<option value="${subdomain}">${subdomain}.puter.site</option>`;
+          }).join('')
+        : '<option value="">Nenhum dominio encontrado - crie um novo</option>';
+      
+      modalElements.domainSelect.innerHTML = options;
+      if (selected) modalElements.domainSelect.value = selected;
+    } catch (error) {
+      console.error('[VisBug] Error loading domains:', error);
+      modalElements.domainSelect.innerHTML = '<option value="">Erro ao carregar dominios</option>';
+    } finally {
+      modalElements.domainSelect.disabled = false;
+    }
+  }
+
+  sanitizeSubdomain(value) {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  }
+
+  async handlePuterCreateDomain() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    const rawValue = modalElements.domainInput.value.trim();
+    const subdomain = this.sanitizeSubdomain(rawValue);
+    if (!subdomain) {
+      this.setPuterStatus('Informe um dominio valido.', 'error');
+      return;
+    }
+
+    this.setPuterLoading(true);
+    try {
+      const puter = await this.ensurePuter();
+      const signedIn = await this.isPuterSignedIn();
+      if (!signedIn) await puter.auth.signIn();
+
+      await puter.hosting.create(subdomain);
+      modalElements.domainInput.value = '';
+      await this.refreshPuterSites(subdomain);
+      this.setPuterStatus(`Dominio ${subdomain}.puter.site criado.`, 'success');
+    } catch (error) {
+      this.setPuterStatus('Nao foi possivel criar o dominio.', 'error');
+    } finally {
+      this.setPuterLoading(false);
+    }
+  }
+
+  async handlePuterPublish() {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+
+    const subdomain = modalElements.domainSelect.value;
+    if (!subdomain) {
+      this.setPuterStatus('Selecione um dominio para publicar.', 'error');
+      return;
+    }
+
+    this.setPuterLoading(true);
+    this.setPuterStatus('Publicando site...', 'info');
+    try {
+      await this.publishToPuter(subdomain);
+      modalElements.siteUrl.textContent = `https://${subdomain}.puter.site`;
+      modalElements.siteUrl.href = `https://${subdomain}.puter.site`;
+      modalElements.siteUrl.style.display = 'inline-flex';
+      this.setPuterStatus('Publicado com sucesso.', 'success');
+    } catch (error) {
+      console.error('[VisBug] Publish error:', error);
+      this.setPuterStatus(`Erro ao publicar no Puter: ${error.message || 'desconhecido'}`, 'error');
+    } finally {
+      this.setPuterLoading(false);
+    }
+  }
+
+  async publishToPuter(subdomain) {
+    const puter = await this.ensurePuter();
+    const signedIn = await this.isPuterSignedIn();
+    if (!signedIn) await puter.auth.signIn();
+
+    const html = await this.buildExportHtmlContent({
+      notify: message => this.setPuterStatus(message, 'error')
+    });
+
+    const normalizedSubdomain = String(subdomain).replace(/\.puter\.site$/i, '');
+    const selectedSite = Array.isArray(this.listSubdomains)
+      ? this.listSubdomains.find(site => (site.subdomain || site) === normalizedSubdomain)
+      : null;
+    const ownerAppUID = selectedSite && selectedSite.app_owner && selectedSite.app_owner.uid;
+
+    if (ownerAppUID && typeof puter.setAppID === 'function' && puter.appID !== ownerAppUID) {
+      console.log('[VisBug] Switching appID to domain owner app:', ownerAppUID);
+      puter.setAppID(ownerAppUID);
+      console.log('[VisBug] appID after switch:', puter.appID);
+    }
+
+    const publishDirectoryName = `${normalizedSubdomain}-${Date.now()}`;
+    console.log('[VisBug] Creating publish directory:', publishDirectoryName);
+
+    const dir = await puter.fs.mkdir(publishDirectoryName, { overwrite: true });
+    const dirPath = (dir && (dir.requested_path || dir.path)) || publishDirectoryName;
+    console.log('[VisBug] Publish directory ready:', dirPath);
+
+    try {
+      await puter.fs.write(`${publishDirectoryName}/index.html`, html, { overwrite: true });
+    } catch (writeError) {
+      console.warn('[VisBug] Write using relative path failed, trying requested_path:', writeError);
+      await puter.fs.write(`${dirPath}/index.html`, html, { overwrite: true });
+    }
+
+    try {
+      console.log('[VisBug] Updating subdomain root:', normalizedSubdomain, dirPath);
+      await puter.hosting.update(normalizedSubdomain, dirPath);
+    } catch (updateError) {
+      console.warn('[VisBug] hosting.update failed, trying create + update:', updateError);
+      try {
+        await puter.hosting.create(normalizedSubdomain);
+      } catch (createError) {
+        // ignore if already exists
+      }
+      await puter.hosting.update(normalizedSubdomain, dirPath);
+    }
+  }
+
+  setPuterStatus(message, type) {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+    modalElements.status.textContent = message || '';
+    modalElements.status.setAttribute('data-status', type || '');
+  }
+
+  setPuterLoading(isLoading) {
+    const modalElements = this.getPuterModalElements();
+    if (!modalElements) return;
+    if (isLoading) {
+      modalElements.authButton.disabled = true;
+    } else {
+      this.updatePuterAuthStatus();
+    }
+    modalElements.createButton.disabled = isLoading;
+    modalElements.publishButton.disabled = isLoading;
+    modalElements.domainSelect.disabled = isLoading;
+    modalElements.domainInput.disabled = isLoading;
   }
 
   inspector() {
@@ -878,7 +1433,7 @@ applyChangesToMobileMediaQuery() {
     return Promise.resolve(new Error("Query not found"))
   }
   downloadHtml() {
-    const htmlContent = document.documentElement.outerHTML;
+    let htmlContent = document.documentElement.outerHTML;
     
     if (!htmlContent.startsWith('<!DOCTYPE html>')) {
       htmlContent = '<!DOCTYPE html>' + htmlContent;
@@ -896,6 +1451,24 @@ applyChangesToMobileMediaQuery() {
 
 
   async downloadHtmlWithStylesAndScripts() {
+    const updatedHtmlContent = await this.buildExportHtmlContent({
+      openPreview: true
+    });
+
+    const blob = new Blob([updatedHtmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);  
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+ }
+
+
+  async buildExportHtmlContent(options = {}) {
+    const { notify, openPreview } = options;
     const imageCount = document.createElement('div');
     imageCount.id = 'imageCount';
     document.body.appendChild(imageCount);
@@ -936,7 +1509,6 @@ applyChangesToMobileMediaQuery() {
       }
     }
   
-    //Remover o bundle.js ou bundle.min.js src="
     // Remove specific scripts
     const scriptElements = cloneDocument.querySelectorAll('script');
     scriptElements.forEach(script => {
@@ -945,7 +1517,6 @@ applyChangesToMobileMediaQuery() {
       }
     });
 
-      //Remover <aside>
     const asideElements = cloneDocument.querySelectorAll('aside');
     asideElements.forEach(aside => {
       aside.remove();
@@ -960,117 +1531,43 @@ applyChangesToMobileMediaQuery() {
 
     const htmlContent = cloneDocument.documentElement.outerHTML;  
 
-    // Enviar o HTML para o backend e obter o HTML atualizado
-    let updatedHtmlContent
-    let response
+    let updatedHtmlContent = htmlContent;
     if (this.pixelMeta !== '' || this.pixelGoogle !== '') {
-      const pixelCode = this.pixelMeta;
       const payload = {
         pixelMeta: this.pixelMeta,
         pixelGoogle: this.pixelGoogle,
         htmlContent: htmlContent
       };
-      await fetch(`https://api-aicopi.zapime.com.br/inject-pixel`, {
+
+      try {
+        const response = await fetch(`http://localhost:3001/openAdvancedEditor`, {
           method: 'POST',
           headers: {
               'Content-Type': 'text/html'
           },
           body: JSON.stringify(payload)
-      }).then(async res => {
-        if (res.status === 200) {
-          response = res
+        });
+        if (response.status === 200) {
           updatedHtmlContent = await response.text();
-          console.log('200 ok')
+          if (openPreview) {
+            window.open(updatedHtmlContent, '_blank');
+          }
         } else {
-          this.deactivate_feature = null
-          alert('Erro ao injetar o pixel. O arquivo será baixado sem o pixel.');
-          updatedHtmlContent = htmlContent;
-          console.log('Erro')
+          if (notify) notify('Erro ao injetar o pixel.');
+          else alert('Erro ao injetar o pixel. O arquivo será baixado sem o pixel.');
         }
-      })
-    }
-    else {
-      updatedHtmlContent = htmlContent;
-      console.log('sem pixel')
+      } catch (error) {
+        if (notify) notify('Erro ao injetar o pixel.');
+        else alert('Erro ao injetar o pixel. O arquivo será baixado sem o pixel.');
+      }
     }
 
-    const blob = new Blob([updatedHtmlContent], { type: 'text/html' });
-    console.log('passow o blob')
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'index.html';
-    document.body.appendChild(a);  
-    console.log('antes do click')
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
+    return updatedHtmlContent;
+  }
 
   
   async generateHtmlWithStylesAndScripts() {
-    const imageCount = document.createElement('div');
-    imageCount.id = 'imageCount';
-    document.body.appendChild(imageCount);
-  
-    const cloneDocument = document.cloneNode(true);
-    // Embed all stylesheets
-    const styleSheets = [...document.styleSheets];
-    for (const styleSheet of styleSheets) {
-      try {
-        if (styleSheet.cssRules) {
-          const newStyle = document.createElement('style');
-          for (const cssRule of styleSheet.cssRules) {
-            newStyle.appendChild(document.createTextNode(cssRule.cssText));
-          }
-          cloneDocument.head.appendChild(newStyle);
-        } else if (styleSheet.href) {
-          const newLink = document.createElement('link');
-          newLink.rel = 'stylesheet';
-          newLink.href = styleSheet.href;
-          cloneDocument.head.appendChild(newLink);
-        }
-      } catch (e) {
-        console.warn('Access to stylesheet %s is restricted by CORS policy', styleSheet.href);
-      }
-    }
-  
-    // Embed all scripts
-    const scripts = [...document.scripts];
-    for (const script of scripts) {
-      if (script.src) {
-        const newScript = document.createElement('script');
-        newScript.src = script.src;
-        cloneDocument.body.appendChild(newScript);
-      } else {
-        const newScript = document.createElement('script');
-        newScript.textContent = script.textContent;
-        cloneDocument.body.appendChild(newScript);
-      }
-    }
-  
-    const visBugElement = cloneDocument.querySelector('vis-bug');
-    if (visBugElement) {
-      visBugElement.remove();
-    }
-
-    this.removeFacebookPixelsFromHeader(cloneDocument);
-    //Rever pois em alguns casos não exibe o video
-    // this.removeCookies(cloneDocument);
-    // if(this.pixelMeta !== '') {
-    //   this.addPixelToHeader(this.pixelMeta, cloneDocument);
-    // }
-    const htmlContent = cloneDocument.documentElement.outerHTML;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    return htmlContent;
-    // const url = URL.createObjectURL(blob);
-    // const a = document.createElement('a');
-    // a.href = url;
-    // a.download = 'index.html';
-    // document.body.appendChild(a);  
-    // a.click();
-    // document.body.removeChild(a);
-    // URL.revokeObjectURL(url);
+    return this.buildExportHtmlContent();
   }
 
   async getBase64Image(imageUrl) {

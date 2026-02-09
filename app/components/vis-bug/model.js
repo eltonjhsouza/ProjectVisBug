@@ -325,13 +325,13 @@ export const VisBugModel = {
     description: `Baixa o HTML da página`,
     instruction: ``,
   },
-  // j: {
-  //   tool:        'publish',
-  //   icon:        Icons.publish_icon,
-  //   label:       '<span>Publicar seu Site</span>',
-  //   description: `Publique automaticamente seu site`,
-  //   instruction: ``,
-  // },
+  j: {
+    tool:        'publish',
+    icon:        Icons.publish_icon,
+    label:       '<span>Publicar no Puter</span>',
+    description: `Publique seu site direto no Puter`,
+    instruction: ``,
+  },
   // o: {
   //   tool:        'proxy',
   //   icon:        Icons.proxy_icon,

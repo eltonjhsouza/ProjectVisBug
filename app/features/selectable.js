@@ -19,6 +19,223 @@ import {
   getTextShadowValues, isFixed, onRemove
 } from '../utilities/'
 
+let inputModalInstance
+
+const requestTextInput = options => {
+  if (!inputModalInstance) inputModalInstance = createTextInputModal()
+  return inputModalInstance.open(options)
+}
+
+const createTextInputModal = () => {
+  let resolveRequest = null
+  let previousOverflow = null
+
+  const hostId = 'iacopi-input-modal'
+  let host = document.getElementById(hostId)
+
+  if (!host) {
+    host = document.createElement('div')
+    host.id = hostId
+    document.documentElement.appendChild(host)
+  }
+
+  const shadow = host.shadowRoot || host.attachShadow({mode: 'open'})
+  shadow.innerHTML = `
+    <style>
+      :host {
+        all: initial;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        pointer-events: none;
+        font-family: 'Poppins', 'Montserrat', sans-serif;
+      }
+      .iacopi-overlay {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(10, 15, 24, 0.55);
+        backdrop-filter: blur(6px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+      .iacopi-overlay[data-open='true'] {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .iacopi-card {
+        width: min(440px, calc(100vw - 32px));
+        background: #ffffff;
+        border-radius: 18px;
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+        color: #0f172a;
+      }
+      .iacopi-header {
+        padding: 18px 20px;
+        background: linear-gradient(135deg, #0f766e, #1a8f82);
+        color: #f8fafc;
+      }
+      .iacopi-title {
+        margin: 0;
+        font-size: 18px;
+      }
+      .iacopi-body {
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+      }
+      .iacopi-message {
+        margin: 0;
+        color: #475569;
+        line-height: 1.4;
+        font-size: 14px;
+      }
+      .iacopi-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #0f172a;
+      }
+      .iacopi-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid #cbd5f5;
+        font-size: 14px;
+        outline: none;
+      }
+      .iacopi-input:focus {
+        border-color: #0f766e;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+      }
+      .iacopi-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .iacopi-button {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .iacopi-primary {
+        background: #0f766e;
+        color: #f8fafc;
+      }
+      .iacopi-ghost {
+        background: transparent;
+        color: #0f766e;
+        border: 1px solid rgba(15, 118, 110, 0.25);
+      }
+    </style>
+    <div class="iacopi-overlay" data-open="false">
+      <form class="iacopi-card" autocomplete="off">
+        <div class="iacopi-header">
+          <h2 class="iacopi-title" data-title></h2>
+        </div>
+        <div class="iacopi-body">
+          <p class="iacopi-message" data-message></p>
+          <div>
+            <div class="iacopi-label" data-label></div>
+            <input class="iacopi-input" data-input type="text" />
+          </div>
+          <div class="iacopi-actions">
+            <button class="iacopi-button iacopi-primary" type="submit" data-confirm></button>
+            <button class="iacopi-button iacopi-ghost" type="button" data-cancel></button>
+          </div>
+        </div>
+      </form>
+    </div>
+  `
+
+  const overlay = shadow.querySelector('.iacopi-overlay')
+  const form = shadow.querySelector('form')
+  const title = shadow.querySelector('[data-title]')
+  const message = shadow.querySelector('[data-message]')
+  const label = shadow.querySelector('[data-label]')
+  const input = shadow.querySelector('[data-input]')
+  const confirmButton = shadow.querySelector('[data-confirm]')
+  const cancelButton = shadow.querySelector('[data-cancel]')
+
+  const open = (options = {}) => {
+    if (resolveRequest) {
+      resolveRequest(null)
+      resolveRequest = null
+    }
+
+    const {
+      titleText = 'Atualizar conteudo',
+      messageText = 'Informe o novo valor.',
+      labelText = 'Valor',
+      placeholder = '',
+      value = '',
+      confirmLabel = 'Salvar',
+      cancelLabel = 'Cancelar',
+    } = options
+
+    title.textContent = titleText
+    message.textContent = messageText
+    label.textContent = labelText
+    input.placeholder = placeholder
+    input.value = value
+    confirmButton.textContent = confirmLabel
+    cancelButton.textContent = cancelLabel
+
+    overlay.setAttribute('data-open', 'true')
+    if (previousOverflow === null) {
+      previousOverflow = document.documentElement.style.overflow
+      document.documentElement.style.overflow = 'hidden'
+    }
+
+    input.focus()
+    input.select()
+
+    return new Promise(resolve => {
+      resolveRequest = resolve
+    })
+  }
+
+  const close = value => {
+    overlay.setAttribute('data-open', 'false')
+    if (previousOverflow !== null) {
+      document.documentElement.style.overflow = previousOverflow
+      previousOverflow = null
+    }
+
+    if (resolveRequest) {
+      const resolve = resolveRequest
+      resolveRequest = null
+      resolve(value)
+    }
+  }
+
+  form.addEventListener('submit', event => {
+    event.preventDefault()
+    close(input.value)
+  })
+
+  cancelButton.addEventListener('click', () => close(null))
+  overlay.addEventListener('click', event => {
+    if (event.target === overlay) close(null)
+  })
+
+  document.addEventListener('keydown', event => {
+    if (overlay.getAttribute('data-open') !== 'true') return
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      close(null)
+    }
+  })
+
+  return {open}
+}
+
 export function Selectable(visbug) {
   const page              = document.body
   let selected            = []
@@ -121,14 +338,21 @@ export function Selectable(visbug) {
     tellWatchers()
   }
 
-  const on_dblclick = e => {
+  const on_dblclick = async e => {
     const $target = deepElementFromPoint(e.clientX, e.clientY)
     // Verifica se o elemento clicado é um link para substituir o href
     if ($target && $target.tagName === 'A') {
-      const newHref = prompt('Cole aqui o novo link:', $target.href);
+      const newHref = await requestTextInput({
+        titleText: 'Atualizar link',
+        messageText: 'Cole aqui o novo link.',
+        labelText: 'URL',
+        placeholder: 'https://',
+        value: $target.href,
+        confirmLabel: 'Atualizar',
+      })
       if (newHref !== null) {
-      $target.href = newHref;
-      console.log('Link href updated:', $target.href);
+        $target.href = newHref
+        console.log('Link href updated:', $target.href)
       }
       return
     }
@@ -136,10 +360,17 @@ export function Selectable(visbug) {
     // Se for uma div que possua um elemento filho que é um iframe com id que começa com 'panda-'
     if ($target && $target.tagName === 'DIV' && $target.querySelector('iframe[id^="panda-"]')) {
       const iframe = $target.querySelector('iframe[id^="panda-"]');
-      const newSrc = prompt('Cole aqui o novo link do iframe:', iframe.src);
+      const newSrc = await requestTextInput({
+        titleText: 'Atualizar iframe',
+        messageText: 'Cole aqui o novo link do iframe.',
+        labelText: 'URL',
+        placeholder: 'https://',
+        value: iframe.src,
+        confirmLabel: 'Atualizar',
+      })
       if (newSrc !== null) {
-      iframe.src = newSrc;
-      console.log('Iframe src updated:', iframe.src);
+        iframe.src = newSrc
+        console.log('Iframe src updated:', iframe.src)
       }
       return
     }
@@ -147,18 +378,32 @@ export function Selectable(visbug) {
 
     // se o elemento clicado for um video ou conter a tag video, substitui o src do video
     if ($target && $target.tagName === 'VIDEO') {
-      const newSrc = prompt('Cole aqui o novo link do vídeo:', $target.src);
+      const newSrc = await requestTextInput({
+        titleText: 'Atualizar video',
+        messageText: 'Cole aqui o novo link do video.',
+        labelText: 'URL',
+        placeholder: 'https://',
+        value: $target.src,
+        confirmLabel: 'Atualizar',
+      })
       if (newSrc !== null) {
-        $target.src = newSrc;
-        console.log('Video src updated:', $target.src);
+        $target.src = newSrc
+        console.log('Video src updated:', $target.src)
       }
       return
     } else if ($target && $target.querySelector('video')) {
       const video = $target.querySelector('video');
-      const newSrc = prompt('Cole aqui o novo link do vídeo:', video.src);
+      const newSrc = await requestTextInput({
+        titleText: 'Atualizar video',
+        messageText: 'Cole aqui o novo link do video.',
+        labelText: 'URL',
+        placeholder: 'https://',
+        value: video.src,
+        confirmLabel: 'Atualizar',
+      })
       if (newSrc !== null) {
-        video.src = newSrc;
-        console.log('Video src updated:', video.src);
+        video.src = newSrc
+        console.log('Video src updated:', video.src)
       }
       return
     }
@@ -284,12 +529,18 @@ export function Selectable(visbug) {
     e.preventDefault()
   }
 
-  const on_InsertLink = e => {
+  const on_InsertLink = async e => {
     e.preventDefault();
     e.stopPropagation();
   
     // Solicita a URL ao usuário
-    const url = prompt('Insira a URL:');
+    const url = await requestTextInput({
+      titleText: 'Inserir link',
+      messageText: 'Insira a URL do link.',
+      labelText: 'URL',
+      placeholder: 'https://',
+      confirmLabel: 'Inserir',
+    })
     if (!url) return; // Sai se a URL for nula ou vazia
   
     // Verifica se há um elemento selecionado
